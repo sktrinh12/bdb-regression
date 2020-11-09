@@ -22,14 +22,14 @@ ui <- shinyUI(fluidPage(
         
         selectInput('CI', 'Confidence Interval', choices=c(0.85, 0.90, 0.95, 0.99)),
         textInput('threshold', '% of 4C Reference MFI Threshold', value=75),
-        checkboxGroupInput('conc_avgs', 'Regression Concentrations', choices=c(
-            '30 ng/test', 
-            '60 ng/test',
-            '125 ng/test',
-            '250 ng/test',
-            '500 ng/test',
-            '1000 ng/test',
-            '2000 ng/test'
+        checkboxGroupInput('conc_avgs', 'Regression Concentrations', c(
+            '30 ng/test' = 2, 
+            '60 ng/test' = 3,
+            '125 ng/test' = 4,
+            '250 ng/test' = 5,
+            '500 ng/test' = 6,
+            '1000 ng/test' = 7,
+            '2000 ng/test' = 8
             ))
     ),
     
@@ -41,7 +41,9 @@ ui <- shinyUI(fluidPage(
         DT::dataTableOutput("melted_table_output"),
         wellPanel(plotOutput('plot_output')),
         wellPanel('Predicted Shelf-Life',
-                  textOutput('shelf_life_output'))
+                  textOutput('shelf_life_output')),
+        textOutput('averages'),
+        textOutput('conc_avgs_list_output')
     )
     
 )
@@ -62,10 +64,16 @@ server <- shinyServer(function(input, output) {
     confidenceInterval <- reactive({input$CI})
     threshold_y <- reactive({input$threshold})
     
-    full_data_table <- reactive({fullDataTable(df_products_upload())})
-    melted_data_table <- reactive({meltedDataTable(full_data_table())})
-    regression_data_table <- reactive({regressionDataTable(full_data_table())})
+    # Concentrations to average
+    conc_avgs_list <- reactive({ unlist(strsplit(input$conc_avgs, " ")) })
+    output$conc_avgs_list_output <- renderText({ length(conc_avgs_list()) })
     
+    # Run linearRegression.R file
+    full_data_table <- reactive({fullDataTable(df_products_upload(), conc_avgs_list())})
+    melted_data_table <- reactive({meltedDataTable(full_data_table())})
+    regression_data_table <- reactive({regressionDataTable(full_data_table())})  
+    
+    # When file uploaded, create plot
     df_full <- eventReactive(input$target_upload,{
         # full_data_table <- fullDataTable(df_products_upload())
         # melted_data_table <- meltedDataTable(full_data_table)
@@ -74,27 +82,23 @@ server <- shinyServer(function(input, output) {
         return (full_data_table)
         })
     
-    # stability_plot <- eventReactive(input$target_upload, {
-    #     # full_data_table <- fullDataTable(df_products_upload())
-    #     # melted_data_table <- meltedDataTable(full_data_table)
-    #     # regression_data_table <- regressionDataTable(full_data_table)
-    #     plot <- createPlot(melted_data_table(), regression_data_table(), as.numeric(confidenceInterval()))
-    #     return (plot)
-    # })
+
+
     
-    # shelf_life <- eventReactive(input$target_upload, {
-    #     SL <- summarizeData(regression_data_table(), as.numeric(threshold_y()))
-    #     return (SL)
-    # })
     
+   
+    # When file uploaded, output shelf-life from linearRegression.R file
     output$shelf_life_output <- renderText({
         if (is.null(input$target_upload)) {
             return (NULL)
         }
-        SL <- summarizeData(regression_data_table(), as.numeric(threshold_y()))
+        SL <- paste(summarizeData(regression_data_table(), as.numeric(threshold_y())), ' years')
     })
     output$sample_table <- DT::renderDataTable({
         df <- df_products_upload()
+        if (is.null(input$target_upload)) {
+            return (NULL)
+        }
         DT::datatable(df) %>%
             formatRound(columns=c(1), 1) %>%
             formatRound(columns=c(2:ncol(df)), 0)
@@ -102,6 +106,11 @@ server <- shinyServer(function(input, output) {
     
     output$plot_output <- renderPlot({
         createPlot(melted_data_table(), regression_data_table(), as.numeric(confidenceInterval()))
+    })
+    
+    output$averages <- renderText({
+        as.list(input$conc_avgs)
+        typeof(input$conc_avgs)
     })
     
 }

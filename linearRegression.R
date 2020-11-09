@@ -23,11 +23,20 @@ df_from_GUI = read.csv('stability_stats.csv')
 
 
 
-fullDataTable <- function(df_from_GUI) {
+fullDataTable <- function(df_from_GUI, cols_to_avg) {
     
     df_csv <- df_from_GUI
     
-    df_full <- cbind(df_csv, "Average"=rowMeans(df_csv[2:ncol(df_csv)]))
+    
+    averagesMatrix <- c()
+    
+    for (i in cols_to_avg) {
+        print(i)
+        averagesMatrix <- cbind(averagesMatrix, df_csv[[as.numeric(i)]])
+    }
+    print(averagesMatrix)
+    
+    df_full <- cbind(df_csv, "Average"=rowMeans(averagesMatrix))
     
     return (df_full)
 }
@@ -93,7 +102,7 @@ summarizeData <- function(df_regression, threshold_y){
     # y = mx + b
     shelf_life <- (threshold_y - b) / m 
     
-    return (shelf_life)
+    return (round(shelf_life,2))
 }
 
 
