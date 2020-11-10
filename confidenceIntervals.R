@@ -1,55 +1,22 @@
-library(ggplot2)
-library(reshape2)
-
-############ User Inputs ############
-
-# COnfidence Interval
-# CI_level <- 0.95
-
-# Threshold % of 4C MFI value to determine shelf-life
-# threshold_y = 75
-
-# Concentrations to Average
-# 
-# rowsToAverage <- cbind(df_csv[])
-# 
-# for () {
-#     
-# }
-#     
-# averagedRows <- rowMeans(df_csv[col1:col2])
-# df_from_GUI = read.csv('stability_stats.csv')
-
-
-
-
-fullDataTable <- function(df_from_GUI, cols_to_avg) {
+fullDataTable <- function(df_from_GUI) {
     
     df_csv <- df_from_GUI
+    print(df_csv)
     
+    # averagesMatrix <- c()
+    # 
+    # for (i in cols_to_avg) {
+    #     print(i)
+    #     averagesMatrix <- cbind(averagesMatrix, df_csv[[as.numeric(i)]])
+    # }
+    # print(averagesMatrix)
     
-    averagesMatrix <- c()
-    
-    for (i in cols_to_avg) {
-        print(i)
-        averagesMatrix <- cbind(averagesMatrix, df_csv[[as.numeric(i)]])
-    }
-    print(averagesMatrix)
-    
-    df_full <- cbind(df_csv, "Average"=rowMeans(averagesMatrix))
+    df_full <- cbind(df_csv, "Average"=rowMeans(cbind(df_csv[[2]], df_csv[[3]], df_csv[[4]], df_csv[[5]], df_csv[[6]], df_csv[[7]], df_csv[[8]])))
     
     return (df_full)
 }
-# 
-# df_csv <- df_from_GUI
+df_full <- fullDataTable(read.csv('stability_stats.csv'))
 
-
-# 
-# df_full <- cbind(df_csv, "Average"=rowMeans(df_csv[2:ncol(df_csv)]))
-# 
-# 
-# df_regression <- data.frame("Time"=df_full$Time,"Average"=df_full$Average)
-# df_regression
 
 meltedDataTable <- function(df_full){
     
@@ -83,29 +50,9 @@ regressionDataTable <- function(df_full) {
     
 }
 
-# regressionData <- regressionDataTable(fullDataTable(df_from_GUI))
+df_regression <- regressionDataTable(fullDataTable(read.csv('stability_stats.csv')))
 
-
-summarizeData <- function(df_regression, threshold_y){
-    # Summary Data
-    fit <- lm(Average ~ Time, data=df_regression)
-    summary_regression <- summary(fit)
-    m <- as.numeric(format(round(summary_regression$coefficients[[2]],2))) # Slope
-    b <- as.numeric(format(round(summary_regression$coefficients[[1]],2))) # y-intercept
-    r_sq <- format(round(summary_regression$r.squared,2)) # Adjusted R^2 value
-    
-    lm_eqn <- paste('y = ',m,'x + ',b)
-    # paste('R-sq = ', r_sq)
-    # expression(R^2 == 0.85)
-
-    
-    # y = mx + b
-    shelf_life <- (threshold_y - b) / m 
-    
-    return (round(shelf_life,2))
-}
-
-reg_conf_intervals <- function(x, y, CI, threshold_y) {
+reg.conf.intervals <- function(x, y, CI, threshold_y) {
     n <- length(y) # Find length of y to use as sample size
     print(n)
     lm.model <- lm(y ~ x) # Fit linear model
@@ -127,7 +74,7 @@ reg_conf_intervals <- function(x, y, CI, threshold_y) {
     print(data.frame(x, y.fit))
     plot(x, y, xlim=c(0,5), ylim =c(0,100))
     lines(y.fit ~ x)
-    
+
     
     # Find the standard error of the regression line
     se <- sqrt(sum((y - y.fit)^2) / (n - 2)) * sqrt(1 / n + (x - mean(x))^2 / sum((x - mean(x))^2))
@@ -136,7 +83,7 @@ reg_conf_intervals <- function(x, y, CI, threshold_y) {
     x_new2 <- 0:max(x)
     y.fit2 <- m * x_new2 + b
     print(data.frame(x_new2, y.fit2))
-    
+
     # Warnings of mismatched lengths are suppressed
     slope.upper <- suppressWarnings(y.fit + t.val * se)
     slope.lower <- suppressWarnings(y.fit - t.val * se)
@@ -168,27 +115,8 @@ reg_conf_intervals <- function(x, y, CI, threshold_y) {
     lines(bands[[2]] ~ bands[[1]], col = 'blue', lty = 2, lwd = 2)
     lines(bands[[4]] ~ bands[[1]], col = 'blue', lty = 2, lwd = 2)
     
-    return(round(shelf_life_lower, 2))
+    return(bands)
 }
 
+conf.intervals <- reg.conf.intervals(df_regression$Time, df_regression$Average, 0.95, 75)
 
-
-createPlot <- function(dataMelt, df_regression, CI_level){
-    outputPlot <- ggplot(dataMelt, aes(x=Time, y=value, color=Concentrations)) +
-        
-        
-        # Line plot based on average of certain columns
-        geom_smooth(data=df_regression, aes(x=Time, y=Average), formula = y ~ x, method="lm", col="blue", level=CI_level) +
-        geom_point(size=4) +
-        labs(x = "Time (y)",
-             y = "% of 4C Reference MFI") +
-        theme_minimal() +
-        scale_color_brewer(palette = 'Blues', labels = c(
-            "30 ng/test", '60 ng/test', '125 ng/test', '250 ng/test', '500 ng/test', '1000 ng/test', '2000 ng/test', 'Average'
-        )) 
-    
-    return (outputPlot)
-}
-# createPlot(dotPlotData, regressionData, 0.99)
-
-                

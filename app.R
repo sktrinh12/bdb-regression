@@ -20,9 +20,18 @@ ui <- shinyUI(fluidPage(
                       '.csv'
                   )),
         
-        selectInput('CI', 'Confidence Interval', choices=c(0.85, 0.90, 0.95, 0.99)),
+        selectInput('CI', 'Confidence Interval', choices=c(0.85, 0.90, 0.95, 0.99), selected = 0.95),
         textInput('threshold', '% of 4C Reference MFI Threshold', value=75),
-        checkboxGroupInput('conc_avgs', 'Regression Concentrations', c(
+        checkboxGroupInput('conc_avgs', 'Regression Concentrations', choices = c(
+            '30 ng/test' = 2, 
+            '60 ng/test' = 3,
+            '125 ng/test' = 4,
+            '250 ng/test' = 5,
+            '500 ng/test' = 6,
+            '1000 ng/test' = 7,
+            '2000 ng/test' = 8
+            ),
+            selected = c(
             '30 ng/test' = 2, 
             '60 ng/test' = 3,
             '125 ng/test' = 4,
@@ -39,11 +48,10 @@ ui <- shinyUI(fluidPage(
         DT::dataTableOutput("full_table_output"),
         DT::dataTableOutput("regression_table_output"),
         DT::dataTableOutput("melted_table_output"),
-        wellPanel(plotOutput('plot_output')),
-        wellPanel('Predicted Shelf-Life',
-                  textOutput('shelf_life_output')),
-        textOutput('averages'),
-        textOutput('conc_avgs_list_output')
+        wellPanel(h4(p(strong("Regression Analysis for Stability"))), plotOutput('plot_output')),
+        wellPanel(h5(p(strong("Predicted Shelf-Life w/ 95% Confidence"))), textOutput('shelf_life_lower_output'))
+        # wellPanel(h5(p(strong("Predicted Shelf-Life w/ 95% Confidence"))), textOutput('shelf_life_lower_output'))
+        
     )
     
 )
@@ -71,7 +79,8 @@ server <- shinyServer(function(input, output) {
     # Run linearRegression.R file
     full_data_table <- reactive({fullDataTable(df_products_upload(), conc_avgs_list())})
     melted_data_table <- reactive({meltedDataTable(full_data_table())})
-    regression_data_table <- reactive({regressionDataTable(full_data_table())})  
+    regression_data_table <- reactive({regressionDataTable(full_data_table())})
+    confidence_intervals <- reactive({ reg_conf_intervals(regression_data_table()$Time, regression_data_table()$Average, as.numeric(confidenceInterval()), as.numeric(threshold_y())) })
     
     # When file uploaded, create plot
     df_full <- eventReactive(input$target_upload,{
@@ -94,6 +103,14 @@ server <- shinyServer(function(input, output) {
         }
         SL <- paste(summarizeData(regression_data_table(), as.numeric(threshold_y())), ' years')
     })
+    
+    output$shelf_life_lower_output <- renderText({
+        if (is.null(input$target_upload)) {
+            return (NULL)
+        }
+        SL <- paste(confidence_intervals(), ' years')
+    })
+    
     output$sample_table <- DT::renderDataTable({
         df <- df_products_upload()
         if (is.null(input$target_upload)) {
@@ -112,6 +129,7 @@ server <- shinyServer(function(input, output) {
         as.list(input$conc_avgs)
         typeof(input$conc_avgs)
     })
+    output$CI_output <- renderText({ as.character(paste0("Predicted Shelf Life with ", input$CI, "% Confidence")) })
     
 }
 )
