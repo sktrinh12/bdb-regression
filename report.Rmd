@@ -1,0 +1,36 @@
+---
+title: "Report"
+output: pdf_document
+params:
+  param2: NA,
+  param3: NA,
+  param4: NA,
+  param5: NA,
+  param6: NA,
+  param7: NA,
+  param8: NA,
+---
+
+```{r}
+
+# The `params` object is available in the document.
+params$param2
+params$param3
+params$param4
+params$param5
+params$param6
+params$param7
+params$param8
+```
+
+A plot of `params$n` random points.
+
+```{r}
+
+library(knitr)
+'% of 4C Reference MFI'
+kable(params$param3)
+
+createPlot(params$param6, params$param7, as.numeric(params$param2))
+
+```

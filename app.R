@@ -39,7 +39,10 @@ ui <- shinyUI(fluidPage(
             '500 ng/test' = 6,
             '1000 ng/test' = 7,
             '2000 ng/test' = 8
-            ))
+            )),
+        radioButtons('format', 'Document format', c('PDF', 'HTML', 'Word'), inline = TRUE),
+        downloadButton("report", "Generate report")
+        
     ),
     
     mainPanel(
@@ -64,7 +67,8 @@ server <- shinyServer(function(input, output) {
         inFile <- input$target_upload
         if (is.null(inFile))
             return(NULL)
-        df <- read.csv(inFile$datapath, header = TRUE, sep = ',')
+        df_unrounded <- read.csv(inFile$datapath, header = TRUE, sep = ',')
+        df <- cbind('Time'=df_unrounded[[1]], round(df_unrounded[2:ncol(df_unrounded)]))
         return(df)
     })
     
@@ -131,8 +135,36 @@ server <- shinyServer(function(input, output) {
     })
     output$CI_output <- renderText({ as.character(paste0("Predicted Shelf Life with ", input$CI, "% Confidence")) })
     
-}
-)
+    ################## R Markdown Report ######################
+    output$report <- downloadHandler(
+        # For PDF output, change this to "report.pdf"
+        filename = "report.pdf",
+        content = function(file) {
+            # Copy the report file to a temporary directory before processing it, in
+            # case we don't have write permissions to the current working dir (which
+            # can happen when deployed).
+            tempReport <- file.path(tempdir(), "report.Rmd")
+            file.copy("report.Rmd", tempReport, overwrite = TRUE)
+            
+            # Set up parameters to pass to Rmd document
+            params <- list(param2 = input$CI,
+                           param3 = df_products_upload(),
+                           param4 = full_data_table(),
+                           param5 = threshold_y(),
+                           param6 = melted_data_table(),
+                           param7 = regression_data_table(),
+                           param8 = confidence_intervals())
+            
+            # Knit the document, passing in the `params` list, and eval it in a
+            # child of the global environment (this isolates the code in the document
+            # from the code in this app).
+            rmarkdown::render(tempReport, output_file = file,
+                              params = params,
+                              envir = new.env(parent = globalenv())
+            )
+        }
+    )
+})
 
 # Run the application 
 shinyApp(ui = ui, server = server)
