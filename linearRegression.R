@@ -36,10 +36,12 @@ fullDataTable <- function(df_from_GUI, cols_to_avg) {
         print(i)
         averagesMatrix <- cbind(averagesMatrix, df_csv[[as.numeric(i)]])
     }
+    print('averagesMatrix: ')
     print(averagesMatrix)
     
     df_full <- cbind(df_csv, "Average"=rowMeans(averagesMatrix, na.rm=TRUE))
-    
+    print('df_full: ')
+    print(df_full)
     return (df_full)
 }
 # 
@@ -57,7 +59,8 @@ meltedDataTable <- function(df_full){
     
     # Melt Columns by Time
     dataMelt <- melt(df_full, "Time", variable='Concentrations')
-    
+    print('dataMelt: ')
+    print(dataMelt)
     return (dataMelt)
 }
 # dotPlotData <- meltedDataTable(fullDataTable(df_from_GUI))
@@ -79,7 +82,8 @@ regressionDataTable <- function(df_full) {
     
     
     df_regression <- data.frame("Time"=df_full$Time,"Average"=df_full$Average)
-    
+    print('df_regression: ')
+    print(df_regression)
     return(df_regression)
     
     

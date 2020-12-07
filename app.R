@@ -113,6 +113,7 @@ server = function(input, output) {
     
     output$sample_table <- DT::renderDataTable({
         df <- df_products_upload()
+        # df <- full_data_table()
         if (is.null(input$target_upload)) {
             return (NULL)
         }
