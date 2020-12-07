@@ -9,6 +9,7 @@ params:
   param6: NA,
   param7: NA,
   param8: NA,
+  param9: NA
 ---
 
 ```{r}
@@ -21,6 +22,7 @@ params$param5
 params$param6
 params$param7
 params$param8
+params$param9
 ```
 
 A plot of `params$n` random points.
@@ -32,5 +34,6 @@ library(knitr)
 kable(params$param3)
 
 createPlot(params$param6, params$param7, as.numeric(params$param2))
+
 
 ```

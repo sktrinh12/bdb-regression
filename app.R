@@ -1,68 +1,64 @@
 library(shiny)
+library(shinythemes)
 library(DT)
 
 source('linearRegression.R')
 
-# Define UI
-ui <- shinyUI(fluidPage(
-    
-    ## USER INPUTS ##
-    headerPanel(
-        'Regression for Stability'
-    ),
-    
-    sidebarPanel(
-    # Upload csv file
-        fileInput('target_upload', 'Choose file to upload',
-                  accept = c(
-                      'text/csv',
-                      'text/comma-separated-values',
-                      '.csv'
-                  )),
-        
-        selectInput('CI', 'Confidence Interval', choices=c(0.85, 0.90, 0.95, 0.99), selected = 0.95),
-        textInput('threshold', '% of 4C Reference MFI Threshold', value=75),
-        checkboxGroupInput('conc_avgs', 'Regression Concentrations', choices = c(
-            '30 ng/test' = 2, 
-            '60 ng/test' = 3,
-            '125 ng/test' = 4,
-            '250 ng/test' = 5,
-            '500 ng/test' = 6,
-            '1000 ng/test' = 7,
-            '2000 ng/test' = 8
-            ),
-            selected = c(
-            '30 ng/test' = 2, 
-            '60 ng/test' = 3,
-            '125 ng/test' = 4,
-            '250 ng/test' = 5,
-            '500 ng/test' = 6,
-            '1000 ng/test' = 7,
-            '2000 ng/test' = 8
-            )),
-        radioButtons('format', 'Document format', c('PDF', 'HTML', 'Word'), inline = TRUE),
-        downloadButton("report", "Generate report")
-        
-    ),
-    
-    mainPanel(
-        ## OUTPUTS ##
-        DT::dataTableOutput("sample_table"),
-        DT::dataTableOutput("full_table_output"),
-        DT::dataTableOutput("regression_table_output"),
-        DT::dataTableOutput("melted_table_output"),
-        wellPanel(h4(p(strong("Regression Analysis for Stability"))), plotOutput('plot_output')),
-        wellPanel(h5(p(strong("Predicted Shelf-Life w/ 95% Confidence"))), textOutput('shelf_life_lower_output'))
-        # wellPanel(h5(p(strong("Predicted Shelf-Life w/ 95% Confidence"))), textOutput('shelf_life_lower_output'))
-        
+ui = tagList(
+    # shinythemes::themeSelector(),
+    navbarPage(
+        theme = shinytheme("journal"),  # <--- To use a theme, uncomment this
+        "Regression for Stability",
+        tabPanel("",
+                 sidebarPanel(
+                     fileInput('target_upload', 'Choose file to upload',
+                               accept = c(
+                                   'text/csv',
+                                   'text/comma-separated-values',
+                                   '.csv'
+                               )),
+                     selectInput('CI', 'Confidence Interval', choices=c(0.85, 0.90, 0.95, 0.99), selected = 0.95),
+                     textInput('threshold', '% of 4C Reference MFI Threshold', value=75),
+                     checkboxGroupInput('conc_avgs', 'Regression Concentrations', choices = c(
+                         '30 ng/test' = 2, 
+                         '60 ng/test' = 3,
+                         '125 ng/test' = 4,
+                         '250 ng/test' = 5,
+                         '500 ng/test' = 6,
+                         '1000 ng/test' = 7,
+                         '2000 ng/test' = 8
+                     ),
+                     selected = c(
+                         '30 ng/test' = 2, 
+                         '60 ng/test' = 3,
+                         '125 ng/test' = 4,
+                         '250 ng/test' = 5,
+                         '500 ng/test' = 6,
+                         '1000 ng/test' = 7,
+                         '2000 ng/test' = 8
+                     )),
+                     radioButtons('format', 'Document format', c('PDF', 'HTML', 'Word'), inline = TRUE),
+                     downloadButton("report", "Generate report", class = "btn-primary")
+                 ),
+                 mainPanel(
+                     tabsetPanel(
+                         tabPanel("Stats Table",
+                                  br(),
+                                  DT::dataTableOutput("sample_table"),
+                                  
+                         ),
+                         tabPanel("Regression & Shelf-Life", 
+                                  wellPanel(h4(p(strong("Regression Analysis for Stability"))), plotlyOutput('plot_output')),
+                                  wellPanel(h4(p(strong("Predicted Shelf-Life"))), textOutput('shelf_life_output'),
+                                            h4(p(strong("Predicted Shelf-Life w/ 95% Confidence"))), textOutput('shelf_life_lower_output')))
+                     )
+                 )
+        )
+        # tabPanel("Navbar 2", "This panel is intentionally left blank"),
+        # tabPanel("Navbar 3", "This panel is intentionally left blank")
     )
-    
 )
-)
-
-# Define server logic
-server <- shinyServer(function(input, output) {
-    
+server = function(input, output) {
     df_products_upload <- reactive({
         inFile <- input$target_upload
         if (is.null(inFile))
@@ -93,13 +89,13 @@ server <- shinyServer(function(input, output) {
         # regression_data_table <- regressionDataTable(full_data_table)
         plot <- createPlot(melted_data_table(), regression_data_table(), as.numeric(confidenceInterval()))
         return (full_data_table)
-        })
-    
-
-
+    })
     
     
-   
+    
+    
+    
+    
     # When file uploaded, output shelf-life from linearRegression.R file
     output$shelf_life_output <- renderText({
         if (is.null(input$target_upload)) {
@@ -125,7 +121,7 @@ server <- shinyServer(function(input, output) {
             formatRound(columns=c(2:ncol(df)), 0)
     })
     
-    output$plot_output <- renderPlot({
+    output$plot_output <- renderPlotly({
         createPlot(melted_data_table(), regression_data_table(), as.numeric(confidenceInterval()))
     })
     
@@ -153,7 +149,8 @@ server <- shinyServer(function(input, output) {
                            param5 = threshold_y(),
                            param6 = melted_data_table(),
                            param7 = regression_data_table(),
-                           param8 = confidence_intervals())
+                           param8 = confidence_intervals(),
+                           param9 = createPlot(melted_data_table(), regression_data_table(), as.numeric(confidenceInterval())))
             
             # Knit the document, passing in the `params` list, and eval it in a
             # child of the global environment (this isolates the code in the document
@@ -164,7 +161,5 @@ server <- shinyServer(function(input, output) {
             )
         }
     )
-})
-
-# Run the application 
-shinyApp(ui = ui, server = server)
+}
+shinyApp(ui=ui, server=server)

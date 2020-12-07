@@ -1,5 +1,7 @@
 library(ggplot2)
 library(reshape2)
+library(plotly)
+
 
 ############ User Inputs ############
 
@@ -36,7 +38,7 @@ fullDataTable <- function(df_from_GUI, cols_to_avg) {
     }
     print(averagesMatrix)
     
-    df_full <- cbind(df_csv, "Average"=rowMeans(averagesMatrix))
+    df_full <- cbind(df_csv, "Average"=rowMeans(averagesMatrix, na.rm=TRUE))
     
     return (df_full)
 }
@@ -89,7 +91,9 @@ regressionDataTable <- function(df_full) {
 summarizeData <- function(df_regression, threshold_y){
     # Summary Data
     fit <- lm(Average ~ Time, data=df_regression)
+    print(fit)
     summary_regression <- summary(fit)
+    print(summary_regression)
     m <- as.numeric(format(round(summary_regression$coefficients[[2]],2))) # Slope
     b <- as.numeric(format(round(summary_regression$coefficients[[1]],2))) # y-intercept
     r_sq <- format(round(summary_regression$r.squared,2)) # Adjusted R^2 value
@@ -97,7 +101,7 @@ summarizeData <- function(df_regression, threshold_y){
     lm_eqn <- paste('y = ',m,'x + ',b)
     # paste('R-sq = ', r_sq)
     # expression(R^2 == 0.85)
-
+    
     
     # y = mx + b
     shelf_life <- (threshold_y - b) / m 
@@ -108,6 +112,7 @@ summarizeData <- function(df_regression, threshold_y){
 reg_conf_intervals <- function(x, y, CI, threshold_y) {
     n <- length(y) # Find length of y to use as sample size
     print(n)
+    print(data.frame('Time'=x,'Average'=y))
     lm.model <- lm(y ~ x) # Fit linear model
     print(lm.model)
     
@@ -178,17 +183,16 @@ createPlot <- function(dataMelt, df_regression, CI_level){
         
         
         # Line plot based on average of certain columns
-        geom_smooth(data=df_regression, aes(x=Time, y=Average), formula = y ~ x, method="lm", col="blue", level=CI_level) +
+        geom_smooth(data=df_regression, aes(x=Time, y=Average), formula = y ~ x, method="lm", col="red", level=CI_level) +
         geom_point(size=4) +
         labs(x = "Time (y)",
              y = "% of 4C Reference MFI") +
         theme_minimal() +
-        scale_color_brewer(palette = 'Blues', labels = c(
+        scale_color_brewer(palette = 'Reds', labels = c(
             "30 ng/test", '60 ng/test', '125 ng/test', '250 ng/test', '500 ng/test', '1000 ng/test', '2000 ng/test', 'Average'
         )) 
-    
+    p <- ggplotly(outputPlot)
     return (outputPlot)
 }
 # createPlot(dotPlotData, regressionData, 0.99)
 
-                
