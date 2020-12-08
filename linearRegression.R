@@ -1,6 +1,7 @@
 library(ggplot2)
 library(reshape2)
 library(plotly)
+library(dplyr)
 
 
 ############ User Inputs ############
@@ -31,15 +32,26 @@ fullDataTable <- function(df_from_GUI, cols_to_avg) {
     
     
     averagesMatrix <- c()
-    
+    list_cols <- c()
     for (i in cols_to_avg) {
         print(i)
         averagesMatrix <- cbind(averagesMatrix, df_csv[[as.numeric(i)]])
+        list_cols <- c(list_cols, as.numeric(i))
     }
     print('averagesMatrix: ')
     print(averagesMatrix)
-    
-    df_full <- cbind(df_csv, "Average"=rowMeans(averagesMatrix, na.rm=TRUE))
+    # print(select(df_csv, as.numeric(cols_to_avg)))
+    print('cols_to_avg: ')
+    print(c(as.numeric(cols_to_avg)))
+    print(list_cols)
+    print(typeof(list_cols))
+    if(is.null(df_csv)){
+        df_selected <- c()
+    }
+    else{
+        df_selected <- dplyr::select(df_csv, c(list_cols))
+    }
+    df_full <- cbind('Time'=df_csv$Time, df_selected, "Average"=rowMeans(averagesMatrix, na.rm=TRUE))
     print('df_full: ')
     print(df_full)
     return (df_full)

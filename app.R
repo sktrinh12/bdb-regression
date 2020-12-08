@@ -88,6 +88,9 @@ server = function(input, output) {
         # melted_data_table <- meltedDataTable(full_data_table)
         # regression_data_table <- regressionDataTable(full_data_table)
         plot <- createPlot(melted_data_table(), regression_data_table(), as.numeric(confidenceInterval()))
+        if (is.null(input$target_upload)) {
+            return (NULL)
+        }
         return (full_data_table)
     })
     
@@ -112,17 +115,21 @@ server = function(input, output) {
     })
     
     output$sample_table <- DT::renderDataTable({
-        df <- df_products_upload()
-        # df <- full_data_table()
+        # df <- df_products_upload()
         if (is.null(input$target_upload)) {
             return (NULL)
         }
+        df <- full_data_table()
+        
         DT::datatable(df) %>%
             formatRound(columns=c(1), 1) %>%
             formatRound(columns=c(2:ncol(df)), 0)
     })
     
     output$plot_output <- renderPlotly({
+        if (is.null(input$target_upload)) {
+            return (NULL)
+        }
         createPlot(melted_data_table(), regression_data_table(), as.numeric(confidenceInterval()))
     })
     
