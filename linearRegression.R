@@ -34,17 +34,17 @@ fullDataTable <- function(df_from_GUI, cols_to_avg) {
     averagesMatrix <- c()
     list_cols <- c()
     for (i in cols_to_avg) {
-        print(i)
+        # print(i)
         averagesMatrix <- cbind(averagesMatrix, df_csv[[as.numeric(i)]])
         list_cols <- c(list_cols, as.numeric(i))
     }
-    print('averagesMatrix: ')
-    print(averagesMatrix)
-    # print(select(df_csv, as.numeric(cols_to_avg)))
-    print('cols_to_avg: ')
-    print(c(as.numeric(cols_to_avg)))
-    print(list_cols)
-    print(typeof(list_cols))
+    # print('averagesMatrix: ')
+    # print(averagesMatrix)
+    # # print(select(df_csv, as.numeric(cols_to_avg)))
+    # print('cols_to_avg: ')
+    # print(c(as.numeric(cols_to_avg)))
+    # print(list_cols)
+    # print(typeof(list_cols))
     if(is.null(df_csv)){
         df_selected <- c()
     }
@@ -52,8 +52,8 @@ fullDataTable <- function(df_from_GUI, cols_to_avg) {
         df_selected <- dplyr::select(df_csv, c(list_cols))
     }
     df_full <- cbind('Time'=df_csv$Time, df_selected, "Average"=rowMeans(averagesMatrix, na.rm=TRUE))
-    print('df_full: ')
-    print(df_full)
+    # print('df_full: ')
+    # print(df_full)
     return (df_full)
 }
 # 
@@ -67,12 +67,19 @@ fullDataTable <- function(df_from_GUI, cols_to_avg) {
 # df_regression <- data.frame("Time"=df_full$Time,"Average"=df_full$Average)
 # df_regression
 
-meltedDataTable <- function(df_full){
+meltedDataTable <- function(df_full=rep(NA, 64)){
     
     # Melt Columns by Time
     dataMelt <- melt(df_full, "Time", variable='Concentrations')
-    print('dataMelt: ')
-    print(dataMelt)
+    # print('dataMelt: ')
+    # print(dataMelt)
+    
+    # p <- ggplot(dataMelt, aes(Time, value)) + geom_point() 
+    #     # geom_smooth(method = lm, fullrange = TRUE, color = "black") +
+    #     # geom_point(data = exclude, shape = 21, fill = NA, color = "black", alpha = 0.25) +
+    #     # coord_cartesian(xlim = c(1.5, 5.5), ylim = c(5,35))
+    # ggplotly(p)
+    
     return (dataMelt)
 }
 # dotPlotData <- meltedDataTable(fullDataTable(df_from_GUI))

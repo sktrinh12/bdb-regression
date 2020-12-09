@@ -45,10 +45,19 @@ ui = tagList(
                          tabPanel("Stats Table",
                                   br(),
                                   DT::dataTableOutput("sample_table"),
+                                  verbatimTextOutput('text1')
                                   
                          ),
                          tabPanel("Regression & Shelf-Life", 
-                                  wellPanel(h4(p(strong("Regression Analysis for Stability"))), plotlyOutput('plot_output')),
+                                  wellPanel(h4(p(strong("Regression Analysis for Stability"))), plotlyOutput('plot_output'),
+                                            plotOutput("plot1", height = 350,
+                                                       click = "plot1_click",
+                                                       brush = brushOpts(
+                                                           id = "plot1_brush"
+                                                       )
+                                            ),
+                                            actionButton("exclude_reset", "Reset")
+                                  ),
                                   wellPanel(h4(p(strong("Predicted Shelf-Life"))), textOutput('shelf_life_output'),
                                             h4(p(strong("Predicted Shelf-Life w/ 95% Confidence"))), textOutput('shelf_life_lower_output')))
                      )
@@ -81,6 +90,80 @@ server = function(input, output) {
     melted_data_table <- reactive({meltedDataTable(full_data_table())})
     regression_data_table <- reactive({regressionDataTable(full_data_table())})
     confidence_intervals <- reactive({ reg_conf_intervals(regression_data_table()$Time, regression_data_table()$Average, as.numeric(confidenceInterval()), as.numeric(threshold_y())) })
+    
+    ###############################################################################
+    num_rows_table <- reactive({nrow(melted_data_table())})
+    output$text1 <- renderPrint({num_rows_table()})
+
+
+    # For storing which rows have been excluded
+    vals <- reactiveValues(
+        # if (is.null(input$target_upload)) {
+        #     return (NULL)
+        # }
+        keeprows = rep(TRUE, 64)
+    )
+
+    output$plot1 <- renderPlot({
+        # Plot the kept and excluded points as two separate data sets
+        keep    <- melted_data_table()[ vals$keeprows, , drop = FALSE]
+        exclude <- melted_data_table()[!vals$keeprows, , drop = FALSE]
+
+        ggplot(melted_data_table(), aes(Time, value)) + geom_point() +
+            geom_smooth(method = lm, fullrange = TRUE, color = "black") +
+            geom_point(data = exclude, shape = 21, fill = NA, color = "black", alpha = 0.25)
+    })
+
+    # Toggle points that are clicked
+    observeEvent(input$plot1_click, {
+        res <- nearPoints(melted_data_table(), input$plot1_click, allRows = TRUE)
+
+        vals$keeprows <- xor(vals$keeprows, res$selected_)
+    })
+
+    # # Toggle points that are brushed, when button is clicked
+    # observeEvent(input$exclude_toggle, {
+    #     res <- brushedPoints(mtcars, input$plot1_brush, allRows = TRUE)
+    #
+    #     vals$keeprows <- xor(vals$keeprows, res$selected_)
+    # })
+    #
+    # Reset all points
+    observeEvent(input$exclude_reset, {
+        vals$keeprows <- rep(TRUE, 64)
+    })
+    # ###################
+    # 
+    # # For storing which rows have been excluded
+    # vals <- reactiveValues(
+    #     keeprows = rep(TRUE, 64)
+    # )
+    # 
+    # output$plot1 <- renderPlot({
+    #     # Plot the kept and excluded points as two separate data sets
+    #     keep    <- melted_data_table()[ vals$keeprows, , drop = FALSE]
+    #     exclude <- melted_data_table()[!vals$keeprows, , drop = FALSE]
+    #     
+    #     ggplot(keep, aes(x=melted_data_table()$Time, y=melted_data_table()$value)) + geom_point() +
+    #         geom_smooth(method = lm, fullrange = TRUE, color = "black") +
+    #         geom_point(data = exclude, shape = 21, fill = NA, color = "black", alpha = 0.25) +
+    #         coord_cartesian(xlim = c(1.5, 5.5), ylim = c(5,35))
+    # })
+    # 
+    # # Toggle points that are clicked
+    # observeEvent(input$plot1_click, {
+    #     res <- nearPoints(melted_data_table(), input$plot1_click, allRows = TRUE)
+    #     
+    #     vals$keeprows <- xor(vals$keeprows, res$selected_)
+    # })
+    # 
+    # # Reset all points
+    # observeEvent(input$exclude_reset, {
+    #     vals$keeprows <- rep(TRUE, nrow(mtcars))
+    # })
+    
+    ###############################################################################
+    
     
     # When file uploaded, create plot
     df_full <- eventReactive(input$target_upload,{
