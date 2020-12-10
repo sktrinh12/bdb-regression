@@ -1,6 +1,8 @@
 library(shiny)
 library(shinythemes)
 library(DT)
+library(ggplot2)
+library(plotly)
 
 source('linearRegression.R')
 
@@ -44,12 +46,13 @@ ui = tagList(
                      tabsetPanel(
                          tabPanel("Stats Table",
                                   br(),
-                                  DT::dataTableOutput("sample_table"),
-                                  verbatimTextOutput('text1')
+                                  DT::dataTableOutput("sample_table")
+                                  
                                   
                          ),
                          tabPanel("Regression & Shelf-Life", 
-                                  wellPanel(h4(p(strong("Regression Analysis for Stability"))), plotlyOutput('plot_output'),
+                                  wellPanel(h4(p(strong("Regression Analysis for Stability"))), 
+                                            plotlyOutput('plot_output'),
                                             plotOutput("plot1", height = 350,
                                                        click = "plot1_click",
                                                        brush = brushOpts(
@@ -59,7 +62,11 @@ ui = tagList(
                                             actionButton("exclude_reset", "Reset")
                                   ),
                                   wellPanel(h4(p(strong("Predicted Shelf-Life"))), textOutput('shelf_life_output'),
-                                            h4(p(strong("Predicted Shelf-Life w/ 95% Confidence"))), textOutput('shelf_life_lower_output')))
+                                            h4(p(strong("Predicted Shelf-Life w/ 95% Confidence"))), textOutput('shelf_life_lower_output'),
+                                            verbatimTextOutput('text1'),
+                                            verbatimTextOutput('text2'),
+                                            verbatimTextOutput('text3')))
+                         
                      )
                  )
         )
@@ -92,67 +99,91 @@ server = function(input, output) {
     confidence_intervals <- reactive({ reg_conf_intervals(regression_data_table()$Time, regression_data_table()$Average, as.numeric(confidenceInterval()), as.numeric(threshold_y())) })
     
     ###############################################################################
-    num_rows_table <- reactive({nrow(melted_data_table())})
-    output$text1 <- renderPrint({num_rows_table()})
-
-
     # For storing which rows have been excluded
     vals <- reactiveValues(
-        # if (is.null(input$target_upload)) {
-        #     return (NULL)
-        # }
         keeprows = rep(TRUE, 64)
     )
-
+    output$text1 <- renderPrint(vals$keeprows)
     output$plot1 <- renderPlot({
         # Plot the kept and excluded points as two separate data sets
-        keep    <- melted_data_table()[ vals$keeprows, , drop = FALSE]
-        exclude <- melted_data_table()[!vals$keeprows, , drop = FALSE]
-
-        ggplot(melted_data_table(), aes(Time, value)) + geom_point() +
-            geom_smooth(method = lm, fullrange = TRUE, color = "black") +
-            geom_point(data = exclude, shape = 21, fill = NA, color = "black", alpha = 0.25)
+        keep    <- melted_data_table()[ vals$keeprows, , drop = FALSE] # subsets the mtcars dataset to pull only values where the keeprows = TRUE
+        exclude <- melted_data_table()[!vals$keeprows, , drop = FALSE] # subsets the mtcars dataset to pull only values where the keeprows = FALSE
+        output$text1 <- renderPrint(keep)
+        ggplot(keep, aes(x=Time, y=value, color=Concentrations)) + 
+            geom_smooth(data=keep, aes(x=Time, y=value), formula = y ~ x, method="lm", col = "red", level=as.numeric(confidenceInterval())) +
+            geom_point(size=6) + # plot with keep dataset points filled in only
+            geom_point(data = exclude, size = 6, fill = NA, color = "black") +
+            labs(x = "Time (years)",
+                          y = "% of 4C Reference MFI") +
+                     theme_minimal() +
+                     scale_color_brewer(palette = 'Reds', labels = c(
+                         "30 ng/test", '60 ng/test', '125 ng/test', '250 ng/test', '500 ng/test', '1000 ng/test', '2000 ng/test', 'Average'
+                     ))
+        
+        # ggplot(dataMelt, aes(x=Time, y=value, color=Concentrations)) +
+        #     # Line plot based on average of certain columns
+        #     geom_smooth(data=df_regression, aes(x=Time, y=Average), formula = y ~ x, method="lm", col="red", level=CI_level) +
+        #     geom_point(size=4) +
+        #     labs(x = "Time (y)",
+        #          y = "% of 4C Reference MFI") +
+        #     theme_minimal() +
+        #     scale_color_brewer(palette = 'Reds', labels = c(
+        #         "30 ng/test", '60 ng/test', '125 ng/test', '250 ng/test', '500 ng/test', '1000 ng/test', '2000 ng/test', 'Average'
+        #     )) 
+        # p <- ggplotly(outputPlot)
+        
     })
-
+    
     # Toggle points that are clicked
     observeEvent(input$plot1_click, {
-        res <- nearPoints(melted_data_table(), input$plot1_click, allRows = TRUE)
-
+        res <- nearPoints(melted_data_table(), input$plot1_click, allRows = TRUE) # plot1_click from plotOutput on UI sends coordinates to server, allRows adds new column to dataframe called "selected_" indicating whether the row was selected or not
+        # output$text1 <- renderPrint(res$selected_)
+        output$text2 <- renderPrint(vals$keeprows)
+        vals$keeprows <- xor(vals$keeprows, res$selected_) # keeprows array is updated 
+        output$text3 <- renderPrint(xor(vals$keeprows, res$selected_))
+    })
+    
+    # Toggle points that are brushed, when button is clicked
+    observeEvent(input$exclude_toggle, {
+        res <- brushedPoints(melted_data_table(), input$plot1_brush, allRows = TRUE)
+        
         vals$keeprows <- xor(vals$keeprows, res$selected_)
     })
-
-    # # Toggle points that are brushed, when button is clicked
-    # observeEvent(input$exclude_toggle, {
-    #     res <- brushedPoints(mtcars, input$plot1_brush, allRows = TRUE)
-    #
-    #     vals$keeprows <- xor(vals$keeprows, res$selected_)
-    # })
-    #
+    
     # Reset all points
     observeEvent(input$exclude_reset, {
         vals$keeprows <- rep(TRUE, 64)
     })
-    # ###################
-    # 
+    
+    # # ##########################################################################
     # # For storing which rows have been excluded
     # vals <- reactiveValues(
-    #     keeprows = rep(TRUE, 64)
+    #     keeprows = rep(TRUE, nrow(mtcars))
     # )
-    # 
+    # output$text1 <- renderPrint(vals$keeprows)
     # output$plot1 <- renderPlot({
     #     # Plot the kept and excluded points as two separate data sets
-    #     keep    <- melted_data_table()[ vals$keeprows, , drop = FALSE]
-    #     exclude <- melted_data_table()[!vals$keeprows, , drop = FALSE]
+    #     keep    <- mtcars[ vals$keeprows, , drop = FALSE] # subsets the mtcars dataset to pull only values where the keeprows = TRUE
+    #     exclude <- mtcars[!vals$keeprows, , drop = FALSE] # subsets the mtcars dataset to pull only values where the keeprows = FALSE
     #     
-    #     ggplot(keep, aes(x=melted_data_table()$Time, y=melted_data_table()$value)) + geom_point() +
+    #     ggplot(keep, aes(wt, mpg)) + geom_point() + # plot with keep dataset points filled in only
     #         geom_smooth(method = lm, fullrange = TRUE, color = "black") +
-    #         geom_point(data = exclude, shape = 21, fill = NA, color = "black", alpha = 0.25) +
+    #         geom_point(data = exclude, shape = 21, fill = NA, color = "black", alpha = 0.25) + # add exclude dataset points with black outline, no fill
     #         coord_cartesian(xlim = c(1.5, 5.5), ylim = c(5,35))
     # })
     # 
     # # Toggle points that are clicked
     # observeEvent(input$plot1_click, {
-    #     res <- nearPoints(melted_data_table(), input$plot1_click, allRows = TRUE)
+    #     res <- nearPoints(mtcars, input$plot1_click, allRows = TRUE) # plot1_click from plotOutput on UI sends coordinates to server, allRows adds new column to dataframe called "selected_" indicating whether the row was selected or not
+    #     output$text1 <- renderPrint(res$selected_)
+    #     output$text2 <- renderPrint(vals$keeprows)
+    #     vals$keeprows <- xor(vals$keeprows, res$selected_) # keeprows array is updated 
+    #     output$text3 <- renderPrint(xor(vals$keeprows, res$selected_))
+    # })
+    # 
+    # # Toggle points that are brushed, when button is clicked
+    # observeEvent(input$exclude_toggle, {
+    #     res <- brushedPoints(mtcars, input$plot1_brush, allRows = TRUE)
     #     
     #     vals$keeprows <- xor(vals$keeprows, res$selected_)
     # })
@@ -161,8 +192,8 @@ server = function(input, output) {
     # observeEvent(input$exclude_reset, {
     #     vals$keeprows <- rep(TRUE, nrow(mtcars))
     # })
-    
-    ###############################################################################
+    # 
+    # ###############################################################################
     
     
     # When file uploaded, create plot
@@ -215,7 +246,7 @@ server = function(input, output) {
         }
         createPlot(melted_data_table(), regression_data_table(), as.numeric(confidenceInterval()))
     })
-    
+
     output$averages <- renderText({
         as.list(input$conc_avgs)
         typeof(input$conc_avgs)

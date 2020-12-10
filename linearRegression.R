@@ -29,8 +29,13 @@ library(dplyr)
 fullDataTable <- function(df_from_GUI, cols_to_avg) {
     
     df_csv <- df_from_GUI
-    
-    
+    # df_melt_full <- melt(df_csv, "Time", variable='Concentrations')
+    # print(df_melt_full)
+    # fit <- lm(value ~ Time, data=df_melt_full)
+    # print(fit)
+    # summary_regression <- summary(fit)
+    # print(summary_regression)
+
     averagesMatrix <- c()
     list_cols <- c()
     for (i in cols_to_avg) {
@@ -71,8 +76,9 @@ meltedDataTable <- function(df_full=rep(NA, 64)){
     
     # Melt Columns by Time
     dataMelt <- melt(df_full, "Time", variable='Concentrations')
-    # print('dataMelt: ')
-    # print(dataMelt)
+    print('dataMelt: ')
+    print(dataMelt)
+    
     
     # p <- ggplot(dataMelt, aes(Time, value)) + geom_point() 
     #     # geom_smooth(method = lm, fullrange = TRUE, color = "black") +
@@ -107,7 +113,9 @@ regressionDataTable <- function(df_full) {
     
     
 }
-
+# summarizeAllData <- function(df_full, threshold_y){
+#     fit <
+# }
 # regressionData <- regressionDataTable(fullDataTable(df_from_GUI))
 
 
