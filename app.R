@@ -96,7 +96,9 @@ server = function(input, output) {
     full_data_table <- reactive({fullDataTable(df_products_upload(), conc_avgs_list())})
     melted_data_table <- reactive({meltedDataTable(full_data_table())})
     regression_data_table <- reactive({regressionDataTable(full_data_table())})
-    confidence_intervals <- reactive({ reg_conf_intervals(regression_data_table()$Time, regression_data_table()$Average, as.numeric(confidenceInterval()), as.numeric(threshold_y())) })
+    # confidence_intervals <- reactive({ reg_conf_intervals(melted_data_table()$Time, melted_data_table()$value, as.numeric(confidenceInterval()), as.numeric(threshold_y())) })
+    confidence_intervals <- reactive({ reg_conf_intervals(keep()$Time, keep()$value, as.numeric(confidenceInterval()), as.numeric(threshold_y())) })
+    
     
     ###############################################################################
     # For storing which rows have been excluded
@@ -108,17 +110,19 @@ server = function(input, output) {
         # Plot the kept and excluded points as two separate data sets
         keep    <- melted_data_table()[ vals$keeprows, , drop = FALSE] # subsets the mtcars dataset to pull only values where the keeprows = TRUE
         exclude <- melted_data_table()[!vals$keeprows, , drop = FALSE] # subsets the mtcars dataset to pull only values where the keeprows = FALSE
-        output$text1 <- renderPrint(keep)
+        # output$text1 <- renderPrint(keep)
+        
         ggplot(keep, aes(x=Time, y=value, color=Concentrations)) + 
             geom_smooth(data=keep, aes(x=Time, y=value), formula = y ~ x, method="lm", col = "red", level=as.numeric(confidenceInterval())) +
-            geom_point(size=6) + # plot with keep dataset points filled in only
-            geom_point(data = exclude, size = 6, fill = NA, color = "black") +
+            geom_point(size=10) + # plot with keep dataset points filled in only
+            geom_point(data = exclude, size = 10, shape = 21, fill = NA, color = 'black') +
             labs(x = "Time (years)",
                           y = "% of 4C Reference MFI") +
                      theme_minimal() +
                      scale_color_brewer(palette = 'Reds', labels = c(
                          "30 ng/test", '60 ng/test', '125 ng/test', '250 ng/test', '500 ng/test', '1000 ng/test', '2000 ng/test', 'Average'
                      ))
+        
         
         # ggplot(dataMelt, aes(x=Time, y=value, color=Concentrations)) +
         #     # Line plot based on average of certain columns
@@ -133,6 +137,8 @@ server = function(input, output) {
         # p <- ggplotly(outputPlot)
         
     })
+    keep    <- reactive({ melted_data_table()[ vals$keeprows, , drop = FALSE] })
+    output$text1 <- renderPrint(keep())
     
     # Toggle points that are clicked
     observeEvent(input$plot1_click, {
@@ -218,7 +224,7 @@ server = function(input, output) {
         if (is.null(input$target_upload)) {
             return (NULL)
         }
-        SL <- paste(summarizeData(regression_data_table(), as.numeric(threshold_y())), ' years')
+        SL <- paste(summarizeData(keep(), as.numeric(threshold_y())), ' years')
     })
     
     output$shelf_life_lower_output <- renderText({
@@ -247,12 +253,12 @@ server = function(input, output) {
         createPlot(melted_data_table(), regression_data_table(), as.numeric(confidenceInterval()))
     })
 
-    output$averages <- renderText({
-        as.list(input$conc_avgs)
-        typeof(input$conc_avgs)
-    })
-    output$CI_output <- renderText({ as.character(paste0("Predicted Shelf Life with ", input$CI, "% Confidence")) })
-    
+    # output$averages <- renderText({
+    #     as.list(input$conc_avgs)
+    #     typeof(input$conc_avgs)
+    # })
+    # output$CI_output <- renderText({ as.character(paste0("Predicted Shelf Life with ", input$CI, "% Confidence")) })
+    # 
     ################## R Markdown Report ######################
     output$report <- downloadHandler(
         # For PDF output, change this to "report.pdf"

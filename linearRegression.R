@@ -29,27 +29,14 @@ library(dplyr)
 fullDataTable <- function(df_from_GUI, cols_to_avg) {
     
     df_csv <- df_from_GUI
-    # df_melt_full <- melt(df_csv, "Time", variable='Concentrations')
-    # print(df_melt_full)
-    # fit <- lm(value ~ Time, data=df_melt_full)
-    # print(fit)
-    # summary_regression <- summary(fit)
-    # print(summary_regression)
 
     averagesMatrix <- c()
     list_cols <- c()
     for (i in cols_to_avg) {
-        # print(i)
         averagesMatrix <- cbind(averagesMatrix, df_csv[[as.numeric(i)]])
         list_cols <- c(list_cols, as.numeric(i))
     }
-    # print('averagesMatrix: ')
-    # print(averagesMatrix)
-    # # print(select(df_csv, as.numeric(cols_to_avg)))
-    # print('cols_to_avg: ')
-    # print(c(as.numeric(cols_to_avg)))
-    # print(list_cols)
-    # print(typeof(list_cols))
+
     if(is.null(df_csv)){
         df_selected <- c()
     }
@@ -57,20 +44,10 @@ fullDataTable <- function(df_from_GUI, cols_to_avg) {
         df_selected <- dplyr::select(df_csv, c(list_cols))
     }
     df_full <- cbind('Time'=df_csv$Time, df_selected, "Average"=rowMeans(averagesMatrix, na.rm=TRUE))
-    # print('df_full: ')
-    # print(df_full)
+
     return (df_full)
 }
-# 
-# df_csv <- df_from_GUI
 
-
-# 
-# df_full <- cbind(df_csv, "Average"=rowMeans(df_csv[2:ncol(df_csv)]))
-# 
-# 
-# df_regression <- data.frame("Time"=df_full$Time,"Average"=df_full$Average)
-# df_regression
 
 meltedDataTable <- function(df_full=rep(NA, 64)){
     
@@ -119,9 +96,9 @@ regressionDataTable <- function(df_full) {
 # regressionData <- regressionDataTable(fullDataTable(df_from_GUI))
 
 
-summarizeData <- function(df_regression, threshold_y){
+summarizeData <- function(df_melt, threshold_y){
     # Summary Data
-    fit <- lm(Average ~ Time, data=df_regression)
+    fit <- lm(value ~ Time, data=df_melt)
     print(fit)
     summary_regression <- summary(fit)
     print(summary_regression)
@@ -143,7 +120,7 @@ summarizeData <- function(df_regression, threshold_y){
 reg_conf_intervals <- function(x, y, CI, threshold_y) {
     n <- length(y) # Find length of y to use as sample size
     print(n)
-    print(data.frame('Time'=x,'Average'=y))
+    print(data.frame('Time'=x,'value'=y))
     lm.model <- lm(y ~ x) # Fit linear model
     print(lm.model)
     
