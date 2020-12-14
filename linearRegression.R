@@ -4,33 +4,16 @@ library(plotly)
 library(dplyr)
 library(readr)
 
-
-############ User Inputs ############
-
-# COnfidence Interval
-# CI_level <- 0.95
-
-# Threshold % of 4C MFI value to determine shelf-life
-# threshold_y = 75
-
-# Concentrations to Average
-# 
-# rowsToAverage <- cbind(df_csv[])
-# 
-# for () {
-#     
-# }
-#     
-# averagedRows <- rowMeans(df_csv[col1:col2])
-# df_from_GUI = read.csv('stability_stats.csv')
-
-# labels_column <- function(df_from_GUI){
-#     df_csv <- df_from_GUI
-#     labels_list <- colnames(df_csv)
-#     print(labels_list)
-#     return (labels_list)
-# }
-
+template_data <- data.frame('Time'=c(0,0.5,1,1.5,2,3,4,5), 
+                            'Conc_30_ng'=rep(NA, 8), 
+                            'Conc_60_ng'=rep(NA, 8),
+                            'Conc_125_ng'=rep(NA, 8),
+                            'Conc_250_ng'=rep(NA, 8),
+                            'Conc_500_ng'=rep(NA, 8),
+                            'Conc_1000_ng'=rep(NA, 8),
+                            'Conc_2000_ng'=rep(NA, 8),
+                            row.names=NULL
+)
 
 fullDataTable <- function(df_from_GUI, cols_to_avg) {
     
@@ -73,16 +56,15 @@ conc_to_exclude <- function(df_from_GUI, cols_to_avg){
     else{
         df_selected <- dplyr::select(df_csv, c(list_cols))
     }
-    print(df_selected)
-    
+
     keep_conc <- cbind('Time'=df_csv$Time, df_selected)
-    print('keep_conc: ')
-    print(keep_conc)
+    print(dim(keep_conc))
+
     return (keep_conc)
 }
 
 
-meltedDataTable <- function(df_full=rep(NA, 64)){
+meltedDataTable <- function(df_full=template_data){
     
     # Melt Columns by Time
     dataMelt <- melt(df_full, "Time", variable='Concentrations')

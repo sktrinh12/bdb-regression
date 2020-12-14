@@ -5,6 +5,7 @@ library(ggplot2)
 library(plotly)
 
 source('linearRegression.R')
+example_file <- read.csv('stability_stats.csv')
 
 ui = tagList(
     # shinythemes::themeSelector(),
@@ -13,6 +14,12 @@ ui = tagList(
         "Regression for Stability",
         tabPanel("",
                  sidebarPanel(
+                     downloadButton("downloadData", "Download Stats Template"),
+                     br(),
+                     br(),
+                     downloadButton("downloadExample", "Download Stats Example"),
+                     br(),
+                     br(),
                      fileInput('target_upload', 'Choose file to upload',
                                accept = c(
                                    'text/csv',
@@ -77,9 +84,37 @@ ui = tagList(
     )
 )
 server = function(input, output) {
+    
+    template_data <- data.frame('Time'=c(0,0.5,1,1.5,2,3,4,5), 
+                                'Conc_30_ng'=rep(NA, 8), 
+                                'Conc_60_ng'=rep(NA, 8),
+                                'Conc_125_ng'=rep(NA, 8),
+                                'Conc_250_ng'=rep(NA, 8),
+                                'Conc_500_ng'=rep(NA, 8),
+                                'Conc_1000_ng'=rep(NA, 8),
+                                'Conc_2000_ng'=rep(NA, 8),
+                                row.names=NULL
+                                )
+    
+    # Download Template Stats File
+    output$downloadData <- downloadHandler(
+        filename = 'stability_stats_template.csv',
+        content = function(file) {
+            write.csv(template_data, file, row.names=FALSE)
+        }
+    )
+    
+    # Download Example Stats File
+    output$downloadExample <- downloadHandler(
+        filename = 'stability_stats_example.csv',
+        content = function(file) {
+            write.csv(example_file, file, row.names=FALSE)
+        }
+    )
+    
     df_products_upload <- reactive({
         inFile <- input$target_upload
-        if (is.null(inFile))
+        if (is.null(inFile)) 
             return(NULL)
         df_unrounded <- read.csv(inFile$datapath, header = TRUE, sep = ',')
         df <- cbind('Time'=df_unrounded[[1]], round(df_unrounded[2:ncol(df_unrounded)]))
@@ -96,8 +131,18 @@ server = function(input, output) {
     
     # Run linearRegression.R file
     # full_data_table <- reactive({fullDataTable(df_products_upload(), conc_avgs_list())})
-    full_data_table <- reactive({conc_to_exclude(df_products_upload(), conc_avgs_list())})
     
+    full_data_table <- reactive({
+        if (is.null(input$target_upload)){
+            return(template_data)
+        }
+        
+        full_data_table_expr <- reactive({conc_to_exclude(df_products_upload(), conc_avgs_list())})
+        return(full_data_table_expr())
+    
+    })
+    
+
     melted_data_table <- reactive({meltedDataTable(full_data_table())})
     regression_data_table <- reactive({regressionDataTable(full_data_table())})
     # confidence_intervals <- reactive({ reg_conf_intervals(melted_data_table()$Time, melted_data_table()$value, as.numeric(confidenceInterval()), as.numeric(threshold_y())) })
