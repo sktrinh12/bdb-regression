@@ -2,6 +2,7 @@ library(ggplot2)
 library(reshape2)
 library(plotly)
 library(dplyr)
+library(readr)
 
 
 ############ User Inputs ############
@@ -23,7 +24,12 @@ library(dplyr)
 # averagedRows <- rowMeans(df_csv[col1:col2])
 # df_from_GUI = read.csv('stability_stats.csv')
 
-
+# labels_column <- function(df_from_GUI){
+#     df_csv <- df_from_GUI
+#     labels_list <- colnames(df_csv)
+#     print(labels_list)
+#     return (labels_list)
+# }
 
 
 fullDataTable <- function(df_from_GUI, cols_to_avg) {
@@ -45,7 +51,34 @@ fullDataTable <- function(df_from_GUI, cols_to_avg) {
     }
     df_full <- cbind('Time'=df_csv$Time, df_selected, "Average"=rowMeans(averagesMatrix, na.rm=TRUE))
 
+    
+    keep_conc <- melted_data_table()[ vals$keeprows, , drop = FALSE]
+    
     return (df_full)
+}
+
+conc_to_exclude <- function(df_from_GUI, cols_to_avg){
+    df_csv <- df_from_GUI
+    
+    keep_matrix_conc <- c()
+    list_cols <- c()
+    for (i in cols_to_avg) {
+        keep_matrix_conc <- cbind(keep_matrix_conc, df_csv[[as.numeric(i)]])
+        list_cols <- c(list_cols, as.numeric(i))
+    }
+    
+    if(is.null(df_csv)){
+        df_selected <- c()
+    }
+    else{
+        df_selected <- dplyr::select(df_csv, c(list_cols))
+    }
+    print(df_selected)
+    
+    keep_conc <- cbind('Time'=df_csv$Time, df_selected)
+    print('keep_conc: ')
+    print(keep_conc)
+    return (keep_conc)
 }
 
 
@@ -53,15 +86,11 @@ meltedDataTable <- function(df_full=rep(NA, 64)){
     
     # Melt Columns by Time
     dataMelt <- melt(df_full, "Time", variable='Concentrations')
+
+    dataMelt <- cbind(dataMelt, 'Labels'=paste0(parse_number(as.character(dataMelt$Concentrations)), ' ng/test'))
     print('dataMelt: ')
     print(dataMelt)
-    
-    
-    # p <- ggplot(dataMelt, aes(Time, value)) + geom_point() 
-    #     # geom_smooth(method = lm, fullrange = TRUE, color = "black") +
-    #     # geom_point(data = exclude, shape = 21, fill = NA, color = "black", alpha = 0.25) +
-    #     # coord_cartesian(xlim = c(1.5, 5.5), ylim = c(5,35))
-    # ggplotly(p)
+
     
     return (dataMelt)
 }
@@ -83,7 +112,7 @@ regressionDataTable <- function(df_full) {
     # df_full <- cbind(df_csv, "Average"=rowMeans(df_csv[2:ncol(df_csv)]))
     
     
-    df_regression <- data.frame("Time"=df_full$Time,"Average"=df_full$Average)
+    df_regression <- data.frame("Time"=df_full$Time,"Average"=df_full$value, na.omit = TRUE)
     print('df_regression: ')
     print(df_regression)
     return(df_regression)
@@ -118,6 +147,8 @@ summarizeData <- function(df_melt, threshold_y){
 }
 
 reg_conf_intervals <- function(x, y, CI, threshold_y) {
+    y <- na.omit(y)
+    x <- na.omit(x)
     n <- length(y) # Find length of y to use as sample size
     print(n)
     print(data.frame('Time'=x,'value'=y))
@@ -131,11 +162,10 @@ reg_conf_intervals <- function(x, y, CI, threshold_y) {
     # Find SSE and MSE
     sse <- sum((y - lm.model$fitted.values)^2)
     mse <- sse / (n - 2)
-    
     t.val <- qt(CI, n - 2) # Calculate critical t-value
     
     # Fit linear model with extracted coefficients
-    x_new <- 0:max(x)
+    x_new <- 0:max(x, na.rm=TRUE)
     y.fit <- m * x + b
     print(data.frame(x, y.fit))
     plot(x, y, xlim=c(0,5), ylim =c(0,100))
