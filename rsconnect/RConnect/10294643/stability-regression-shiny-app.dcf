@@ -1,0 +1,13 @@
+name: stability-regression-shiny-app
+title: stability-regression-shiny-app
+username: 10294643
+account: 10294643
+server: RConnect
+hostUrl: https://bdstattools.bdx.com:3939/__api__
+appId: 88
+bundleId: 624
+url: https://bdstattools.bdx.com:3939/bdb-stability-regression-shiny-app/
+when: 1608063948.96338
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: confidenceIntervals.R

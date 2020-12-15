@@ -14,6 +14,7 @@ ui = tagList(
         "Regression for Stability",
         tabPanel("",
                  sidebarPanel(
+                     includeHTML("analytics.html"),
                      downloadButton("downloadData", "Download Stats Template"),
                      br(),
                      br(),
