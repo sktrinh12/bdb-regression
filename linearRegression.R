@@ -32,12 +32,12 @@ fullDataTable <- function(df_from_GUI, cols_to_avg) {
     else{
         df_selected <- dplyr::select(df_csv, c(list_cols))
     }
-    df_full <- cbind('Time'=df_csv$Time, df_selected, "Average"=rowMeans(averagesMatrix, na.rm=TRUE))
+    df_full2 <- cbind('Time'=df_csv$Time, df_selected, "Average"=rowMeans(averagesMatrix, na.rm=TRUE))
 
     
     keep_conc <- melted_data_table()[ vals$keeprows, , drop = FALSE]
     
-    return (df_full)
+    return (df_full2)
 }
 
 conc_to_exclude <- function(df_from_GUI, cols_to_avg){
@@ -58,7 +58,8 @@ conc_to_exclude <- function(df_from_GUI, cols_to_avg){
     }
 
     keep_conc <- cbind('Time'=df_csv$Time, df_selected)
-    print(dim(keep_conc))
+
+    
 
     return (keep_conc)
 }

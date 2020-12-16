@@ -70,10 +70,11 @@ ui = tagList(
                                             actionButton("exclude_reset", "Reset")
                                   ),
                                   wellPanel(h4(p(strong("Predicted Shelf-Life"))), textOutput('shelf_life_output'),
-                                            h4(p(strong("Predicted Shelf-Life w/ 95% Confidence"))), textOutput('shelf_life_lower_output'),
+                                            h4(p(strong("Predicted Shelf-Life w/ 95% Confidence"))), textOutput('shelf_life_lower_output')
+                                            # verbatimTextOutput('conc_avgs_list_output'),
+                                            # verbatimTextOutput('melt_out'),
+                                            # 
                                             # verbatimTextOutput('text1'),
-                                            # verbatimTextOutput('text2'),
-                                            # verbatimTextOutput('text3')
                                             )
                                   )
                          
@@ -131,20 +132,32 @@ server = function(input, output) {
     output$conc_avgs_list_output <- renderText({ length(conc_avgs_list()) })
     
     # Run linearRegression.R file
-    # full_data_table <- reactive({fullDataTable(df_products_upload(), conc_avgs_list())})
-    
     full_data_table <- reactive({
-        if (is.null(input$target_upload)){
+        if(is.null(input$target_upload)){
             return(template_data)
         }
         
-        full_data_table_expr <- reactive({conc_to_exclude(df_products_upload(), conc_avgs_list())})
-        return(full_data_table_expr())
-    
+        return(conc_to_exclude(df_products_upload(), conc_avgs_list()))
     })
+    # if(is.null(input$target_upload)){
+    #     full_data_table <- template_data
+    # }
+    # 
+    # full_data_table <- reactive({conc_to_exclude(df_products_upload(), conc_avgs_list())})
+    
+    # full_data_table <- reactive({
+    #     if (is.null(input$target_upload)){
+    #         return(template_data)
+    #     }
+    #     
+    #     full_data_table_expr <- reactive({conc_to_exclude(df_products_upload(), conc_avgs_list())})
+    #     return(full_data_table_expr())
+    # 
+    # })
     
 
     melted_data_table <- reactive({meltedDataTable(full_data_table())})
+    output$melt_out <- renderPrint({melted_data_table()})
     regression_data_table <- reactive({regressionDataTable(full_data_table())})
     # confidence_intervals <- reactive({ reg_conf_intervals(melted_data_table()$Time, melted_data_table()$value, as.numeric(confidenceInterval()), as.numeric(threshold_y())) })
     confidence_intervals <- reactive({ reg_conf_intervals(keep()$Time, keep()$value, as.numeric(confidenceInterval()), as.numeric(threshold_y())) })
@@ -168,9 +181,9 @@ server = function(input, output) {
         # vals$keeprows <- rep(TRUE, nrow(melted_data_table()))
         keep    <- melted_data_table()[ vals$keeprows, , drop = FALSE] # subsets the mtcars dataset to pull only values where the keeprows = TRUE
         exclude <- melted_data_table()[!vals$keeprows, , drop = FALSE] # subsets the mtcars dataset to pull only values where the keeprows = FALSE
-        # output$text1 <- renderPrint(keep)
-        # keep <- keep[complete.cases(keep),]
-        # print(keep)
+        output$text1 <- renderPrint(keep)
+        keep <- keep[complete.cases(keep),]
+        print(keep)
         ggplot(keep, aes(x=Time, y=value, color=Concentrations)) + 
             geom_smooth(data=keep, aes(x=Time, y=value), formula = y ~ x, method="lm", col = "red", level=as.numeric(confidenceInterval())) +
             geom_point(size=10) + # plot with keep dataset points filled in only
@@ -198,7 +211,7 @@ server = function(input, output) {
         
     })
     keep    <- reactive({ melted_data_table()[ vals$keeprows, , drop = FALSE] })
-    # output$text1 <- renderPrint(keep())
+    output$text1 <- renderPrint(keep())
     
     # Toggle points that are clicked
     observeEvent(input$plot1_click, {
