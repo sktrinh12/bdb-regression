@@ -13,10 +13,10 @@ params:
 # _**Settings Selected for Analysis:**_
 
 ## Confidence Interval:
-\textcolor{blue}{`r params$CI`}
+`r params$CI`
 
 ## % of 4C MFI Threshold:
-\textcolor{blue}{`r params$threshold`}
+`r params$threshold`%
 
 # _**% of 4C MFI Stability Data:**_
 
@@ -45,7 +45,7 @@ ggplot(params$meltedDT, aes(x=Time, y=value, color=Concentrations)) +
 # _**Predicted Shelf-Life:**_
 
 ### Based on Linear Regression:
-\textcolor{blue}{`r params$shelf_life` years}
+`r params$shelf_life` years
 
 ### Based on Linear Regression at Lower 95% Confidence:
-\textcolor{blue}{`r params$shelf_life_lower` years}
+`r params$shelf_life_lower` years
