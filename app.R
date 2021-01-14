@@ -3,6 +3,8 @@ library(shinythemes)
 library(DT)
 library(ggplot2)
 library(plotly)
+library(knitr)
+library(rmarkdown)
 
 source('linearRegression.R')
 example_file <- read.csv('stability_stats.csv')
@@ -139,27 +141,12 @@ server = function(input, output) {
         
         return(conc_to_exclude(df_products_upload(), conc_avgs_list()))
     })
-    # if(is.null(input$target_upload)){
-    #     full_data_table <- template_data
-    # }
-    # 
-    # full_data_table <- reactive({conc_to_exclude(df_products_upload(), conc_avgs_list())})
-    
-    # full_data_table <- reactive({
-    #     if (is.null(input$target_upload)){
-    #         return(template_data)
-    #     }
-    #     
-    #     full_data_table_expr <- reactive({conc_to_exclude(df_products_upload(), conc_avgs_list())})
-    #     return(full_data_table_expr())
-    # 
-    # })
+
     
 
     melted_data_table <- reactive({meltedDataTable(full_data_table())})
     output$melt_out <- renderPrint({melted_data_table()})
     regression_data_table <- reactive({regressionDataTable(full_data_table())})
-    # confidence_intervals <- reactive({ reg_conf_intervals(melted_data_table()$Time, melted_data_table()$value, as.numeric(confidenceInterval()), as.numeric(threshold_y())) })
     confidence_intervals <- reactive({ reg_conf_intervals(keep()$Time, keep()$value, as.numeric(confidenceInterval()), as.numeric(threshold_y())) })
     
     labels <- reactive({ labels_column(input$target_upload) })
@@ -179,8 +166,8 @@ server = function(input, output) {
     output$plot1 <- renderPlot({
         # Plot the kept and excluded points as two separate data sets
         # vals$keeprows <- rep(TRUE, nrow(melted_data_table()))
-        keep    <- melted_data_table()[ vals$keeprows, , drop = FALSE] # subsets the mtcars dataset to pull only values where the keeprows = TRUE
-        exclude <- melted_data_table()[!vals$keeprows, , drop = FALSE] # subsets the mtcars dataset to pull only values where the keeprows = FALSE
+        keep    <- melted_data_table()[ vals$keeprows, , drop = FALSE] 
+        exclude <- melted_data_table()[!vals$keeprows, , drop = FALSE] 
         output$text1 <- renderPrint(keep)
         keep <- keep[complete.cases(keep),]
         print(keep)
@@ -197,26 +184,13 @@ server = function(input, output) {
                      )
         
         
-        # ggplot(dataMelt, aes(x=Time, y=value, color=Concentrations)) +
-        #     # Line plot based on average of certain columns
-        #     geom_smooth(data=df_regression, aes(x=Time, y=Average), formula = y ~ x, method="lm", col="red", level=CI_level) +
-        #     geom_point(size=4) +
-        #     labs(x = "Time (y)",
-        #          y = "% of 4C Reference MFI") +
-        #     theme_minimal() +
-        #     scale_color_brewer(palette = 'Reds', labels = c(
-        #         "30 ng/test", '60 ng/test', '125 ng/test', '250 ng/test', '500 ng/test', '1000 ng/test', '2000 ng/test', 'Average'
-        #     )) 
-        # p <- ggplotly(outputPlot)
-        
     })
     keep    <- reactive({ melted_data_table()[ vals$keeprows, , drop = FALSE] })
     output$text1 <- renderPrint(keep())
     
     # Toggle points that are clicked
     observeEvent(input$plot1_click, {
-        res <- nearPoints(melted_data_table(), input$plot1_click, allRows = TRUE) # plot1_click from plotOutput on UI sends coordinates to server, allRows adds new column to dataframe called "selected_" indicating whether the row was selected or not
-        # output$text1 <- renderPrint(res$selected_)
+        res <- nearPoints(melted_data_table(), input$plot1_click, allRows = TRUE) 
         output$text2 <- renderPrint(vals$keeprows)
         vals$keeprows <- xor(vals$keeprows, res$selected_) # keeprows array is updated 
         output$text3 <- renderPrint(xor(vals$keeprows, res$selected_))
@@ -233,55 +207,12 @@ server = function(input, output) {
     observeEvent(input$exclude_reset, {
         vals$keeprows <- rep(TRUE, 64)
     })
-    
-    
-    
-    # # ##########################################################################
-    # # For storing which rows have been excluded
-    # vals <- reactiveValues(
-    #     keeprows = rep(TRUE, nrow(mtcars))
-    # )
-    # output$text1 <- renderPrint(vals$keeprows)
-    # output$plot1 <- renderPlot({
-    #     # Plot the kept and excluded points as two separate data sets
-    #     keep    <- mtcars[ vals$keeprows, , drop = FALSE] # subsets the mtcars dataset to pull only values where the keeprows = TRUE
-    #     exclude <- mtcars[!vals$keeprows, , drop = FALSE] # subsets the mtcars dataset to pull only values where the keeprows = FALSE
-    #     
-    #     ggplot(keep, aes(wt, mpg)) + geom_point() + # plot with keep dataset points filled in only
-    #         geom_smooth(method = lm, fullrange = TRUE, color = "black") +
-    #         geom_point(data = exclude, shape = 21, fill = NA, color = "black", alpha = 0.25) + # add exclude dataset points with black outline, no fill
-    #         coord_cartesian(xlim = c(1.5, 5.5), ylim = c(5,35))
-    # })
-    # 
-    # # Toggle points that are clicked
-    # observeEvent(input$plot1_click, {
-    #     res <- nearPoints(mtcars, input$plot1_click, allRows = TRUE) # plot1_click from plotOutput on UI sends coordinates to server, allRows adds new column to dataframe called "selected_" indicating whether the row was selected or not
-    #     output$text1 <- renderPrint(res$selected_)
-    #     output$text2 <- renderPrint(vals$keeprows)
-    #     vals$keeprows <- xor(vals$keeprows, res$selected_) # keeprows array is updated 
-    #     output$text3 <- renderPrint(xor(vals$keeprows, res$selected_))
-    # })
-    # 
-    # # Toggle points that are brushed, when button is clicked
-    # observeEvent(input$exclude_toggle, {
-    #     res <- brushedPoints(mtcars, input$plot1_brush, allRows = TRUE)
-    #     
-    #     vals$keeprows <- xor(vals$keeprows, res$selected_)
-    # })
-    # 
-    # # Reset all points
-    # observeEvent(input$exclude_reset, {
-    #     vals$keeprows <- rep(TRUE, nrow(mtcars))
-    # })
-    # 
-    # ###############################################################################
+
     
     
     # When file uploaded, create plot
     df_full <- eventReactive(input$target_upload,{
-        # full_data_table <- fullDataTable(df_products_upload())
-        # melted_data_table <- meltedDataTable(full_data_table)
-        # regression_data_table <- regressionDataTable(full_data_table)
+
         plot <- createPlot(melted_data_table(), regression_data_table(), as.numeric(confidenceInterval()))
         if (is.null(input$target_upload)) {
             return (NULL)
@@ -317,21 +248,10 @@ server = function(input, output) {
             formatRound(columns=c(2:ncol(df)), 0)
     })
     
-    # output$plot_output <- renderPlotly({
-    #     if (is.null(input$target_upload)) {
-    #         return (NULL)
-    #     }
-    #     createPlot(melted_data_table(), regression_data_table(), as.numeric(confidenceInterval()))
-    # })
-
-    # output$averages <- renderText({
-    #     as.list(input$conc_avgs)
-    #     typeof(input$conc_avgs)
-    # })
-    # output$CI_output <- renderText({ as.character(paste0("Predicted Shelf Life with ", input$CI, "% Confidence")) })
-    # 
+  
     ################## R Markdown Report ######################
     output$report <- downloadHandler(
+        
         # For PDF output, change this to "report.pdf"
         filename = "report.pdf",
         content = function(file) {
@@ -342,22 +262,19 @@ server = function(input, output) {
             file.copy("report.Rmd", tempReport, overwrite = TRUE)
             
             # Set up parameters to pass to Rmd document
-            params <- list(param2 = input$CI,
-                           param3 = df_products_upload(),
-                           param4 = full_data_table(),
-                           param5 = threshold_y(),
-                           param6 = melted_data_table(),
-                           param7 = regression_data_table(),
-                           param8 = confidence_intervals(),
-                           param9 = createPlot(melted_data_table(), regression_data_table(), as.numeric(confidenceInterval())))
+            params <- list(CI = input$CI,
+                           threshold = input$threshold,
+                           fullDT = full_data_table(),
+                           meltedDT = melted_data_table(),
+                           shelf_life = summarizeData(melted_data_table(), as.numeric(input$threshold)),
+                           shelf_life_lower = confidence_intervals()
+                           )
             
-            # Knit the document, passing in the `params` list, and eval it in a
-            # child of the global environment (this isolates the code in the document
-            # from the code in this app).
-            rmarkdown::render(tempReport, output_file = file,
+            rmarkdown::render(tempReport, output_format = "pdf_document", output_file = file,
                               params = params,
                               envir = new.env(parent = globalenv())
             )
+
         }
     )
 }
