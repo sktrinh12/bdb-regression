@@ -1,4 +1,4 @@
-source('linearRegression.R')
+source('global.R')
 example_file <- read.csv('stability_stats.csv')
 
 server = function(input, output) {

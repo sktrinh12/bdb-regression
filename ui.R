@@ -6,7 +6,7 @@ library(plotly)
 library(knitr)
 library(rmarkdown)
 
-source('linearRegression.R')
+source('global.R')
 example_file <- read.csv('stability_stats.csv')
 
 ui = tagList(
