@@ -1,92 +1,6 @@
-library(shiny)
-library(shinythemes)
-library(DT)
-library(ggplot2)
-library(plotly)
-library(knitr)
-library(rmarkdown)
-
 source('linearRegression.R')
 example_file <- read.csv('stability_stats.csv')
 
-ui = tagList(
-    # shinythemes::themeSelector(),
-    navbarPage(
-        theme = shinytheme("journal"),  # <--- To use a theme, uncomment this
-        "Regression for Stability",
-        tabPanel("",
-                 sidebarPanel(
-                     includeHTML("analytics.html"),
-                     downloadButton("downloadData", "Download Stats Template"),
-                     br(),
-                     br(),
-                     downloadButton("downloadExample", "Download Stats Example"),
-                     br(),
-                     br(),
-                     fileInput('target_upload', 'Choose file to upload',
-                               accept = c(
-                                   'text/csv',
-                                   'text/comma-separated-values',
-                                   '.csv'
-                               )),
-                     selectInput('CI', 'Confidence Interval', choices=c(0.85, 0.90, 0.95, 0.99), selected = 0.95),
-                     textInput('threshold', '% of 4C Reference MFI Threshold', value=75),
-                     checkboxGroupInput('conc_avgs', 'Regression Concentrations', choices = c(
-                         '30 ng/test' = 2, 
-                         '60 ng/test' = 3,
-                         '125 ng/test' = 4,
-                         '250 ng/test' = 5,
-                         '500 ng/test' = 6,
-                         '1000 ng/test' = 7,
-                         '2000 ng/test' = 8
-                     ),
-                     selected = c(
-                         '30 ng/test' = 2, 
-                         '60 ng/test' = 3,
-                         '125 ng/test' = 4,
-                         '250 ng/test' = 5,
-                         '500 ng/test' = 6,
-                         '1000 ng/test' = 7,
-                         '2000 ng/test' = 8
-                     )),
-                     radioButtons('format', 'Document format', c('PDF', 'HTML', 'Word'), inline = TRUE),
-                     downloadButton("report", "Generate report", class = "btn-primary")
-                 ),
-                 mainPanel(
-                     tabsetPanel(
-                         tabPanel("Stats Table",
-                                  br(),
-                                  DT::dataTableOutput("sample_table")
-                                  
-                                  
-                         ),
-                         tabPanel("Regression & Shelf-Life", 
-                                  wellPanel(h4(p(strong("Regression Analysis for Stability"))), 
-                                            # plotlyOutput('plot_output'),
-                                            plotOutput("plot1", height = 350,
-                                                       click = "plot1_click",
-                                                       brush = brushOpts(
-                                                           id = "plot1_brush"
-                                                       )
-                                            ),
-                                            actionButton("exclude_reset", "Reset")
-                                  ),
-                                  wellPanel(h4(p(strong("Predicted Shelf-Life"))), textOutput('shelf_life_output'),
-                                            h4(p(strong("Predicted Shelf-Life w/ 95% Confidence"))), textOutput('shelf_life_lower_output')
-                                            # verbatimTextOutput('conc_avgs_list_output'),
-                                            # verbatimTextOutput('melt_out'),
-                                            # 
-                                            # verbatimTextOutput('text1'),
-                                            )
-                                  )
-                         
-                     )
-                 )
-        )
-        # tabPanel("Navbar 2", "This panel is intentionally left blank"),
-        # tabPanel("Navbar 3", "This panel is intentionally left blank")
-    )
-)
 server = function(input, output) {
     
     template_data <- data.frame('Time'=c(0,0.5,1,1.5,2,3,4,5), 
@@ -98,7 +12,7 @@ server = function(input, output) {
                                 'Conc_1000_ng'=rep(NA, 8),
                                 'Conc_2000_ng'=rep(NA, 8),
                                 row.names=NULL
-                                )
+    )
     
     # Download Template Stats File
     output$downloadData <- downloadHandler(
@@ -141,9 +55,9 @@ server = function(input, output) {
         
         return(conc_to_exclude(df_products_upload(), conc_avgs_list()))
     })
-
     
-
+    
+    
     melted_data_table <- reactive({meltedDataTable(full_data_table())})
     output$melt_out <- renderPrint({melted_data_table()})
     regression_data_table <- reactive({regressionDataTable(full_data_table())})
@@ -176,12 +90,12 @@ server = function(input, output) {
             geom_point(size=10) + # plot with keep dataset points filled in only
             geom_point(data = exclude, size = 10, shape = 21, fill = NA, color = 'black') +
             labs(x = "Time (years)",
-                          y = "% of 4C Reference MFI") +
-                     theme_minimal() +
-                     scale_color_brewer(palette = 'Reds', na.translate = F,
-                                        labels = unique(keep$Labels)
-                                        # labels = c("30 ng/test", '60 ng/test', '125 ng/test', '250 ng/test', '500 ng/test', '1000 ng/test', '2000 ng/test')
-                     )
+                 y = "% of 4C Reference MFI") +
+            theme_minimal() +
+            scale_color_brewer(palette = 'Reds', na.translate = F,
+                               labels = unique(keep$Labels)
+                               # labels = c("30 ng/test", '60 ng/test', '125 ng/test', '250 ng/test', '500 ng/test', '1000 ng/test', '2000 ng/test')
+            )
         
         
     })
@@ -207,12 +121,12 @@ server = function(input, output) {
     observeEvent(input$exclude_reset, {
         vals$keeprows <- rep(TRUE, 64)
     })
-
+    
     
     
     # When file uploaded, create plot
     df_full <- eventReactive(input$target_upload,{
-
+        
         plot <- createPlot(melted_data_table(), regression_data_table(), as.numeric(confidenceInterval()))
         if (is.null(input$target_upload)) {
             return (NULL)
@@ -248,7 +162,7 @@ server = function(input, output) {
             formatRound(columns=c(2:ncol(df)), 0)
     })
     
-  
+    
     ################## R Markdown Report ######################
     output$report <- downloadHandler(
         
@@ -268,14 +182,13 @@ server = function(input, output) {
                            meltedDT = melted_data_table(),
                            shelf_life = summarizeData(melted_data_table(), as.numeric(input$threshold)),
                            shelf_life_lower = confidence_intervals()
-                           )
+            )
             
             rmarkdown::render(tempReport, output_format = "pdf_document", output_file = file,
                               params = params,
                               envir = new.env(parent = globalenv())
             )
-
+            
         }
     )
 }
-shinyApp(ui=ui, server=server)
