@@ -298,25 +298,38 @@ summarizeData <- function(df_melt, threshold_y){
     return (round(shelf_life,2))
 }
 
-best_fit_equation <- function(df_melt, threshold_y, order) {
-    fit <- lm(value ~ poly(Time,order, raw=TRUE), data=df_melt)
-    print(fit)
-    summary_regression <- summary(fit)
-    print(summary_regression)
+best_fit_equation <- function(df_melt, order) {
+    # fit <- lm(value ~ poly(Time,order, raw=TRUE), data=df_melt)
+    # print(fit)
+    summary_regression <- summary(lm(value ~ poly(Time,order, raw=TRUE), data=df_melt))
+    # print(summary_regression)
     
-    a <- as.numeric(format(round(summary_regression$coefficients[[1]],2))) # y-intercept
-    b <- as.numeric(format(round(summary_regression$coefficients[[2]],2))) # 1st order coeff
-    c <- ifelse(order > 1, as.numeric(format(round(summary_regression$coefficients[[3]],2))), 0) # 2nd order coeff
-    d <- ifelse(order > 2, as.numeric(format(round(summary_regression$coefficients[[4]],2))), 0) # 3rd order coeff
-    
-    print(paste("a: ", a))
-    print(paste("b: ", b))
-    print(paste("c: ", c))
-    print(paste("d: ", d))
-    
-    r_sq <- format(round(summary_regression$r.squared,2)) # Adjusted R^2 value
+    # a <- as.numeric(format(round(summary_regression$coefficients[[1]],2))) # y-intercept
+    # b <- as.numeric(format(round(summary_regression$coefficients[[2]],2))) # 1st order coeff
+    # c <- ifelse(order > 1, as.numeric(format(round(summary_regression$coefficients[[3]],2))), 0) # 2nd order coeff
+    # d <- ifelse(order > 2, as.numeric(format(round(summary_regression$coefficients[[4]],2))), 0) # 3rd order coeff
+    # 
+    # print(paste("a: ", a))
+    # print(paste("b: ", b))
+    # print(paste("c: ", c))
+    # print(paste("d: ", d))
+    # 
+    # r_sq <- format(round(summary_regression$r.squared,2)) # Adjusted R^2 value
+    return(summary_regression)
 }
 
+R_sq <- function(df_melt, order){
+    summary_regression <- summary(lm(value ~ poly(Time,order, raw=TRUE), data=df_melt))
+    r_sq <- format(round(summary_regression$r.squared,2)) # R^2 value
+    adj_r_sq <- format(round(summary_regression$adj.r.squared,2)) # Adjusted R^2 value
+
+    return(as.numeric(r_sq))
+
+}
+
+# find_slope <- function(){
+#     
+# }
 
 
 solve_for_shelf_life <- function(df_melt, threshold_y, order){
@@ -497,7 +510,6 @@ reg_conf_intervals <- function(x, y, df_melt, order, CI, threshold_y) {
 # formula <- lm(wt ~ poly(hp,2,raw=TRUE))
 fit <- lm(wt ~ poly(hp,1,raw=TRUE), data=mtcars)
 sm <- summary(fit)
-sm
 ggplot(mtcars, aes(x=hp,y=wt)) + 
     geom_point(size=5) + 
     stat_smooth(aes(hp,wt), method = "lm", formula = y ~ poly(x,1,raw=TRUE)) + 

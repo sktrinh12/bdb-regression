@@ -72,14 +72,83 @@ ui = tagList(
                                             ),
                                             actionButton("exclude_reset", "Reset")
                                   ),
-                                  wellPanel(h4(p(strong("Predicted Shelf-Life"))), textOutput('shelf_life_output'),
-                                            h4(p(strong("Predicted Shelf-Life w/ 95% Confidence"))), textOutput('shelf_life_lower_output')
-                                            # verbatimTextOutput('conc_avgs_list_output'),
-                                            # verbatimTextOutput('melt_out'),
-                                            # 
-                                            # verbatimTextOutput('text1'),
-                                  ),
-                                  textOutput('polyroot')
+                                  
+                                  # wellPanel(
+                                  #     fluidRow(
+                                  #         column(
+                                  #             6,
+                                  #             h4(p(strong(
+                                  #                 "Predicted Shelf-Life"
+                                  #             ))),
+                                  #             textOutput('shelf_life_output'),
+                                  #             tags$head(
+                                  #                 tags$style(
+                                  #                     "#shelf_life_output{color: #eb6864;
+                                  #                    font-size: 20px;
+                                  #                    font-weight: bold;
+                                  #                    }"
+                                  #                 )
+                                  #             ),
+                                  #             h4(p(
+                                  #                 strong("Predicted Shelf-Life w/ 95% Confidence")
+                                  #             )),
+                                  #             textOutput('shelf_life_lower_output'),
+                                  #             tags$head(
+                                  #                 tags$style(
+                                  #                     "#shelf_life_lower_output{color: #eb6864;
+                                  #                    font-size: 20px;
+                                  #                    font-weight: bold;
+                                  #                    }"
+                                  #                 )
+                                  #             ),
+                                  #             br(),
+                                  #             uiOutput('warning_ui')
+                                  #         ),
+                                  #         column(
+                                  #             6,
+                                  #             textAreaInput("notes", "Notes", placeholder = "Add any notes regarding your experiment or decisions to exclude data points.", height =
+                                  #                               "100px")
+                                  #         )
+                                  # )), # end of well panel
+
+                                  fluidRow(column(
+                                      6,wellPanel(
+                                      
+                                          
+                                              h4(p(strong(
+                                                  "Predicted Shelf-Life"
+                                              ))),
+                                              textOutput('shelf_life_output'),
+                                              tags$head(
+                                                  tags$style(
+                                                      "#shelf_life_output{color: #eb6864;
+                                                     font-size: 20px;
+                                                     font-weight: bold;
+                                                     }"
+                                                  )
+                                              ),
+                                              h4(p(
+                                                  strong("Predicted Shelf-Life w/ 95% Confidence")
+                                              )),
+                                              textOutput('shelf_life_lower_output'),
+                                              tags$head(
+                                                  tags$style(
+                                                      "#shelf_life_lower_output{color: #eb6864;
+                                                     font-size: 20px;
+                                                     font-weight: bold;
+                                                     }"
+                                                  )
+                                              ),
+                                              br(),
+                                              uiOutput('warning_ui_rsq'),
+                                              uiOutput('warning_ui_slope')
+                                          )),
+                                          column(
+                                              6,wellPanel(
+                                              textAreaInput("notes", "Notes", placeholder = "Add any notes regarding your experiment or decisions to exclude data points.", height =
+                                                                "120px")
+                                          )
+                                      )) # end of well panel
                          )
                          
                      )

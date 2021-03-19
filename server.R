@@ -64,9 +64,35 @@ server = function(input, output) {
     output$melt_out <- renderPrint({melted_data_table()})
     regression_data_table <- reactive({regressionDataTable(full_data_table())})
     confidence_intervals <- reactive({ reg_conf_intervals(keep()$Time, keep()$value, keep(), poly_order(), as.numeric(confidenceInterval()), as.numeric(threshold_y())) })
+    slope <- reactive({ best_fit_equation(keep(), poly_order())$coefficients[[2]] })
+    
+    R_sq_val <- reactive({ R_sq(keep(), poly_order()) })
+
+    r_val <- reactive({ ifelse(R_sq_val() < 0.80, "UH OH", "All good :)") })
+
+    output$rval <- renderText({ r_val() })
+
     
     labels <- reactive({ labels_column(input$target_upload) })
     
+    output$warning_ui_rsq <- renderUI({
+        req(input$target_upload)
+        if(R_sq_val() < 0.80){
+                tags$i(" Warning: R-squared value is below 0.80",
+                class = "fa fa-exclamation-triangle", 
+                style = "color: #fcba03; font-size: 20px"
+                )
+        }
+    })
+    output$warning_ui_slope <- renderUI({
+        req(input$target_upload)
+        if(slope() > 0){
+            tags$i(" Warning: Regression slope is positive",
+                   class = "fa fa-exclamation-triangle", 
+                   style = "color: #fcba03; font-size: 20px"
+            )
+        }
+    })
     ###############################################################################
     # For storing which rows have been excluded
     vals <- reactiveValues(
@@ -149,14 +175,14 @@ server = function(input, output) {
         if (is.null(input$target_upload)) {
             return (NULL)
         }
-        SL <- paste(polyroot_shelf_life(), ' years')
+        SL <- paste0(polyroot_shelf_life(), ' years   ', '(', round(as.numeric(polyroot_shelf_life())*365,0), ' days)')
     })
     
     output$shelf_life_lower_output <- renderText({
         if (is.null(input$target_upload)) {
             return (NULL)
         }
-        SL <- paste(confidence_intervals(), ' years')
+        SL <- paste0(confidence_intervals(), ' years   ', '(', round(as.numeric(confidence_intervals())*365,0), ' days)')
     })
     
     output$sample_table <- DT::renderDataTable({
