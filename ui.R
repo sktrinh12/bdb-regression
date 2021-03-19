@@ -29,6 +29,7 @@ ui = tagList(
                                    'text/comma-separated-values',
                                    '.csv'
                                )),
+                     radioButtons('polynomial_order','Order of Polynomial', choices=c("Linear","2nd Order", "3rd Order"), inline=TRUE),
                      selectInput('CI', 'Confidence Interval', choices=c(0.85, 0.90, 0.95, 0.99), selected = 0.95),
                      textInput('threshold', '% of 4C Reference MFI Threshold', value=75),
                      checkboxGroupInput('conc_avgs', 'Regression Concentrations', choices = c(
@@ -77,7 +78,8 @@ ui = tagList(
                                             # verbatimTextOutput('melt_out'),
                                             # 
                                             # verbatimTextOutput('text1'),
-                                  )
+                                  ),
+                                  textOutput('polyroot')
                          )
                          
                      )

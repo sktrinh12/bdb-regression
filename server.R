@@ -56,12 +56,14 @@ server = function(input, output) {
         return(conc_to_exclude(df_products_upload(), conc_avgs_list()))
     })
     
+    poly_order <- reactive({ order_of_polynomial(input$polynomial_order) })
     
-    
+    polyroot_shelf_life <- reactive({ solve_for_shelf_life(keep(), as.numeric(threshold_y()), poly_order()) })
+    output$polyroot <- renderText({ polyroot_shelf_life() })
     melted_data_table <- reactive({meltedDataTable(full_data_table())})
     output$melt_out <- renderPrint({melted_data_table()})
     regression_data_table <- reactive({regressionDataTable(full_data_table())})
-    confidence_intervals <- reactive({ reg_conf_intervals(keep()$Time, keep()$value, as.numeric(confidenceInterval()), as.numeric(threshold_y())) })
+    confidence_intervals <- reactive({ reg_conf_intervals(keep()$Time, keep()$value, keep(), poly_order(), as.numeric(confidenceInterval()), as.numeric(threshold_y())) })
     
     labels <- reactive({ labels_column(input$target_upload) })
     
@@ -86,7 +88,7 @@ server = function(input, output) {
         keep <- keep[complete.cases(keep),]
         print(keep)
         ggplot(keep, aes(x=Time, y=value, color=Concentrations)) + 
-            geom_smooth(data=keep, aes(x=Time, y=value), formula = y ~ x, method="lm", col = "red", level=as.numeric(confidenceInterval())) +
+            geom_smooth(data=keep, aes(x=Time, y=value), formula = y ~ poly(x,poly_order(), raw=TRUE), method="lm", col = "red", level=as.numeric(confidenceInterval())) +
             geom_point(size=10) + # plot with keep dataset points filled in only
             geom_point(data = exclude, size = 10, shape = 21, fill = NA, color = 'black') +
             labs(x = "Time (years)",
@@ -95,7 +97,14 @@ server = function(input, output) {
             scale_color_brewer(palette = 'Reds', na.translate = F,
                                labels = unique(keep$Labels)
                                # labels = c("30 ng/test", '60 ng/test', '125 ng/test', '250 ng/test', '500 ng/test', '1000 ng/test', '2000 ng/test')
-            )
+            ) +
+            stat_regline_equation(data=keep, aes(x=Time, y=value,label=paste(..eq.label.., ..rr.label..,..adj.rr.label.., sep = "~~~~~~")), formula = y ~ poly(x,poly_order(),raw=TRUE), method="lm", col="red",
+                                  label.x=1.5,
+                                  label.y.npc="top",
+                                  
+                                  size=7) +
+            theme(text=element_text(size = 20))
+            
         
         
     })
@@ -124,15 +133,15 @@ server = function(input, output) {
     
     
     
-    # When file uploaded, create plot
-    df_full <- eventReactive(input$target_upload,{
-        
-        plot <- createPlot(melted_data_table(), regression_data_table(), as.numeric(confidenceInterval()))
-        if (is.null(input$target_upload)) {
-            return (NULL)
-        }
-        return (full_data_table)
-    })
+    # # When file uploaded, create plot
+    # df_full <- eventReactive(input$target_upload,{
+    #     
+    #     # plot <- createPlot(melted_data_table(), regression_data_table(), as.numeric(confidenceInterval()))
+    #     if (is.null(input$target_upload)) {
+    #         return (NULL)
+    #     }
+    #     return (full_data_table())
+    # })
     
     
     # When file uploaded, output shelf-life from linearRegression.R file
@@ -140,7 +149,7 @@ server = function(input, output) {
         if (is.null(input$target_upload)) {
             return (NULL)
         }
-        SL <- paste(summarizeData(keep(), as.numeric(threshold_y())), ' years')
+        SL <- paste(polyroot_shelf_life(), ' years')
     })
     
     output$shelf_life_lower_output <- renderText({
