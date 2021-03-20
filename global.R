@@ -299,22 +299,7 @@ summarizeData <- function(df_melt, threshold_y){
 }
 
 best_fit_equation <- function(df_melt, order) {
-    # fit <- lm(value ~ poly(Time,order, raw=TRUE), data=df_melt)
-    # print(fit)
     summary_regression <- summary(lm(value ~ poly(Time,order, raw=TRUE), data=df_melt))
-    # print(summary_regression)
-    
-    # a <- as.numeric(format(round(summary_regression$coefficients[[1]],2))) # y-intercept
-    # b <- as.numeric(format(round(summary_regression$coefficients[[2]],2))) # 1st order coeff
-    # c <- ifelse(order > 1, as.numeric(format(round(summary_regression$coefficients[[3]],2))), 0) # 2nd order coeff
-    # d <- ifelse(order > 2, as.numeric(format(round(summary_regression$coefficients[[4]],2))), 0) # 3rd order coeff
-    # 
-    # print(paste("a: ", a))
-    # print(paste("b: ", b))
-    # print(paste("c: ", c))
-    # print(paste("d: ", d))
-    # 
-    # r_sq <- format(round(summary_regression$r.squared,2)) # Adjusted R^2 value
     return(summary_regression)
 }
 
@@ -326,11 +311,6 @@ R_sq <- function(df_melt, order){
     return(as.numeric(r_sq))
 
 }
-
-# find_slope <- function(){
-#     
-# }
-
 
 solve_for_shelf_life <- function(df_melt, threshold_y, order){
     
@@ -360,9 +340,9 @@ solve_for_shelf_life <- function(df_melt, threshold_y, order){
     return(round(shelf_life,2))
 }
 
-reg_conf_intervals <- function(x, y, df_melt, order, CI, threshold_y) {
-    y <- na.omit(y)
-    x <- na.omit(x)
+reg_conf_intervals <- function(df_melt, order, CI, threshold_y) {
+    y <- na.omit(df_melt$value)
+    x <- na.omit(df_melt$Time)
     n <- length(y) # Find length of y to use as sample size
     # print(n)
     # if (!raw && anyNA(x)) stop("missing values are not allowed in 'poly'")
@@ -380,18 +360,6 @@ reg_conf_intervals <- function(x, y, df_melt, order, CI, threshold_y) {
     c <- ifelse(order > 1, as.numeric(format(round(summary_regression$coefficients[[3]],2))), 0) # 2nd order coeff
     d <- ifelse(order > 2, as.numeric(format(round(summary_regression$coefficients[[4]],2))), 0) # 3rd order coeff
     
-    print(paste("a: ", a))
-    print(paste("b: ", b))
-    print(paste("c: ", c))
-    print(paste("d: ", d))
-    
-    # Extract fitted coefficients from model object
-    # b <- lm.model$coefficients[1]
-    # m <- lm.model$coefficients[2]
-    # print(b)
-    # print(m)
-    # shelf_life <- (threshold_y - b) / m
-    # print(shelf_life)
     # Find SSE and MSE
     sse <- sum((y - fit$fitted.values)^2)
     mse <- sse / (n - 2)
@@ -400,10 +368,6 @@ reg_conf_intervals <- function(x, y, df_melt, order, CI, threshold_y) {
     # Fit linear model with extracted coefficients
     x_new <- 0:max(x, na.rm=TRUE)
     y.fit <- a + b*x + c*x^2 + d*x^3
-    # print(data.frame(x, y.fit))
-    # plot(x, y, xlim=c(0,5), ylim =c(0,100))
-    # lines(y.fit ~ x)
-    
     
     # Find the standard error of the regression line
     se <- sqrt(sum((y - y.fit)^2) / (n - 2)) * sqrt(1 / n + (x - mean(x))^2 / sum((x - mean(x))^2))
@@ -411,8 +375,7 @@ reg_conf_intervals <- function(x, y, df_melt, order, CI, threshold_y) {
     # Fit a new linear model that extends past the given data points (for plotting)
     x_new2 <- 0:max(x)
     y.fit2 <- a + b*x_new2 + c*x_new2^2 + d*x_new2^3
-    # print(data.frame(x_new2, y.fit2))
-    
+
     # Warnings of mismatched lengths are suppressed
     slope.upper <- suppressWarnings(y.fit + t.val * se)
     slope.lower <- suppressWarnings(y.fit - t.val * se)
@@ -443,40 +406,103 @@ reg_conf_intervals <- function(x, y, df_melt, order, CI, threshold_y) {
     f2_lower <- function(x) threshold_y
     
     shelf_life_lower <- uniroot(function(x) f1_lower(x)-f2_lower(x),c(0,5), extendInt="yes")$root
-    
-    # shelf_life <- (threshold_y - a) / b
-    # shelf_life_lower <- (threshold_y - a_lower) / b_lower
+
     print(paste("shelf-life: ", shelf_life))
     print(paste("shelf-life of lower: ", shelf_life_lower))
-    
     
     # Collect the computed confidence bands into a data.frame and name the columns
     bands <- data.frame(cbind(x, slope.lower, y.fit, slope.upper))
     colnames(bands) <- c('X Values', 'Lower Confidence Band', 'Y Values', 'Upper Confidence Band')
-    print(bands[[1]])
-    print(bands[[2]])
-    print('-----------DF_MELT------------')
-    print(df_melt)
-    print('--------------PLOT MY GGPLOT2-------------')
-    ggplot(df_melt, aes(x=x, y=y)) +
-        geom_point(size=5) +
-        labs(x = "Time (years)",
-             y = "% of 4C Reference MFI") +
-        theme_minimal() +
-        scale_color_brewer(palette = 'Reds', na.translate = F
-        )
-    
+
+    print('-----------CONFIDENCE BANDS------------')
+    print(bands)
+    # ggplot(df_melt, aes(x=Time, y=value)) +
+    #     geom_point(size=5) +
+    #     labs(x = "Time (years)",
+    #          y = "% of 4C Reference MFI") +
+    #     theme_minimal() +
+    #     scale_color_brewer(palette = 'Reds', na.translate = F
+    #     )
+    # ggplot(mtcars, aes(x=hp,y=wt)) + 
+    #     geom_point(size=5) + 
+    #     stat_smooth(aes(hp,wt), method = "lm", formula = y ~ poly(x,1,raw=TRUE)) + 
+    #     stat_regline_equation(label.x = 2, label.y = 8) + 
+    #     stat_regline_equation(aes(label =  paste(..eq.label.., ..rr.label..,..adj.rr.label.., sep = "~~~~~~")), formula = y ~ poly(x,1,raw=TRUE)) + 
+    #     ylim(0,10)
     # Plot the fitted linear regression line and the computed confidence bands
     # plot(x, y, cex = 1.75, pch = 21, bg = 'gray', xlim=c(0,5), ylim =c(60,100))
     # lines(y.fit ~ poly(x,order,raw=TRUE), col = 'black', lwd = 2)
     # # lines(bands[[2]] ~ poly(bands[[1]],order,raw=TRUE), col = 'blue', lty = 2, lwd = 2)
     # # lines(bands[[4]] ~ poly(bands[[1]],order,raw=TRUE), col = 'blue', lty = 2, lwd = 2)
     # plot(bands[[1]], bands[[2]], cex = 1.75, pch = 21, bg = 'blue',)
-    # plot(bands[[1]], bands[[4]], cex = 1.75, pch = 21, bg = 'blue',)
+    # points(bands[[1]], bands[[4]], cex = 1.75, pch = 21, bg = 'blue',)
+    
+    return(bands)
+}
+
+solve_for_lower_shelf_life <- function(df_melt, order, CI, threshold_y){
+    y <- na.omit(df_melt$value)
+    x <- na.omit(df_melt$Time)
+    n <- length(y) # Find length of y to use as sample size
+
+    fit <- lm(y ~ poly(x,order,raw=TRUE),data=df_melt)
+    
+    print(fit)
+    summary_regression <- summary(fit)
+    print(summary_regression)
+    
+    a <- as.numeric(format(round(summary_regression$coefficients[[1]],2))) # y-intercept
+    b <- as.numeric(format(round(summary_regression$coefficients[[2]],2))) # 1st order coeff
+    c <- ifelse(order > 1, as.numeric(format(round(summary_regression$coefficients[[3]],2))), 0) # 2nd order coeff
+    d <- ifelse(order > 2, as.numeric(format(round(summary_regression$coefficients[[4]],2))), 0) # 3rd order coeff
+    
+    # Find SSE and MSE
+    sse <- sum((y - fit$fitted.values)^2)
+    mse <- sse / (n - 2)
+    t.val <- qt(CI, n - 2) # Calculate critical t-value
+    
+    # Fit linear model with extracted coefficients
+    x_new <- 0:max(x, na.rm=TRUE)
+    y.fit <- a + b*x + c*x^2 + d*x^3
+    
+    # Find the standard error of the regression line
+    se <- sqrt(sum((y - y.fit)^2) / (n - 2)) * sqrt(1 / n + (x - mean(x))^2 / sum((x - mean(x))^2))
+    
+    # Fit a new linear model that extends past the given data points (for plotting)
+    x_new2 <- 0:max(x)
+    y.fit2 <- a + b*x_new2 + c*x_new2^2 + d*x_new2^3
+    
+    # Warnings of mismatched lengths are suppressed
+    slope.upper <- suppressWarnings(y.fit + t.val * se)
+    slope.lower <- suppressWarnings(y.fit - t.val * se)
+    
+    fit_lower <- lm(slope.lower ~ poly(x,order, raw=TRUE))
+    print(fit_lower)
+    summary_regression_lower <- summary(fit_lower)
+    print(summary_regression_lower)
+
+    f1 <- function(x) a + b*x + c*x^2 + d*x^3
+    f2 <- function(x) threshold_y
+    
+    shelf_life <- uniroot(function(x) f1(x)-f2(x),c(0,5), extendInt="yes")$root
+    
+    a_lower <- as.numeric(format(round(summary_regression_lower$coefficients[[1]],2))) # y-intercept
+    b_lower <- as.numeric(format(round(summary_regression_lower$coefficients[[2]],2))) # 1st order coeff
+    c_lower <- ifelse(order > 1, as.numeric(format(round(summary_regression_lower$coefficients[[3]],2))), 0) # 2nd order coeff
+    d_lower <- ifelse(order > 2, as.numeric(format(round(summary_regression_lower$coefficients[[4]],2))), 0) # 3rd order coeff
+    
+    print(paste("a_lower: ", a_lower))
+    print(paste("b_lower: ", b_lower))
+    print(paste("c_lower: ", c_lower))
+    print(paste("d_lower: ", d_lower))
+    
+    f1_lower <- function(x) a_lower + b_lower*x + c_lower*x^2 + d_lower*x^3
+    f2_lower <- function(x) threshold_y
+    
+    shelf_life_lower <- uniroot(function(x) f1_lower(x)-f2_lower(x),c(0,5), extendInt="yes")$root
     
     return(round(shelf_life_lower, 2))
 }
-
 
 # fit <- lm(wt ~ poly(hp, 1, raw=TRUE), data=mtcars)
 # fit2 <- lm(wt ~ hp, data=mtcars)
@@ -515,5 +541,6 @@ ggplot(mtcars, aes(x=hp,y=wt)) +
     stat_smooth(aes(hp,wt), method = "lm", formula = y ~ poly(x,1,raw=TRUE)) + 
     stat_regline_equation(label.x = 2, label.y = 8) + 
     stat_regline_equation(aes(label =  paste(..eq.label.., ..rr.label..,..adj.rr.label.., sep = "~~~~~~")), formula = y ~ poly(x,1,raw=TRUE)) + 
-    ylim(0,10)
+    ylim(0,10) +
+    geom_point(data=iris, aes(x=Sepal.Length, y=Petal.Length, color=Species))
 

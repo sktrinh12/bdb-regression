@@ -63,7 +63,9 @@ server = function(input, output) {
     melted_data_table <- reactive({meltedDataTable(full_data_table())})
     output$melt_out <- renderPrint({melted_data_table()})
     regression_data_table <- reactive({regressionDataTable(full_data_table())})
-    confidence_intervals <- reactive({ reg_conf_intervals(keep()$Time, keep()$value, keep(), poly_order(), as.numeric(confidenceInterval()), as.numeric(threshold_y())) })
+    confidence_bands <- reactive({ reg_conf_intervals(keep(), poly_order(), as.numeric(confidenceInterval()), as.numeric(threshold_y())) })
+    lower_shelf_life <- reactive({ solve_for_lower_shelf_life(keep(), poly_order(), as.numeric(confidenceInterval()), as.numeric(threshold_y() )) })
+    
     slope <- reactive({ best_fit_equation(keep(), poly_order())$coefficients[[2]] })
     
     R_sq_val <- reactive({ R_sq(keep(), poly_order()) })
@@ -113,8 +115,11 @@ server = function(input, output) {
         output$text1 <- renderPrint(keep)
         keep <- keep[complete.cases(keep),]
         print(keep)
+        
         ggplot(keep, aes(x=Time, y=value, color=Concentrations)) + 
-            geom_smooth(data=keep, aes(x=Time, y=value), formula = y ~ poly(x,poly_order(), raw=TRUE), method="lm", col = "red", level=as.numeric(confidenceInterval())) +
+            # geom_smooth(data=keep, aes(x=Time), formula = y ~ poly(x,poly_order(), raw=TRUE), method="lm", col = "red", level=as.numeric(confidenceInterval())) +
+            geom_ribbon(data=keep, aes(x=Time, y=value, ymin=confidence_bands()[[2]], ymax=confidence_bands()[[4]]), formula = y ~ poly(x,poly_order(), raw=TRUE), method="lm", col = "red", level=as.numeric(confidenceInterval()), alpha=0.2) +
+            geom_line(data=confidence_bands(), aes(x=confidence_bands()[[1]], y=confidence_bands()[[3]]), formula = y ~ poly(x,poly_order(), raw=TRUE), method="lm", col = "red") +
             geom_point(size=10) + # plot with keep dataset points filled in only
             geom_point(data = exclude, size = 10, shape = 21, fill = NA, color = 'black') +
             labs(x = "Time (years)",
@@ -129,7 +134,12 @@ server = function(input, output) {
                                   label.y.npc="top",
                                   
                                   size=7) +
-            theme(text=element_text(size = 20))
+            theme(text=element_text(size = 20)) 
+            # geom_point(data=data.frame(confidence_bands()), aes(x=confidence_bands()[[1]], y=confidence_bands()[[2]]), formula = y ~ x, size=4, color="green") + 
+            # geom_line(data=confidence_bands(), aes(x=confidence_bands()[[1]], y=confidence_bands()[[2]]), formula = y ~ x,  color="green") +
+            # geom_point(data=data.frame(confidence_bands()), aes(x=confidence_bands()[[1]], y=confidence_bands()[[4]]), formula = y ~ x, size=4, color="green") + 
+            # geom_line(data=confidence_bands(), aes(x=confidence_bands()[[1]], y=confidence_bands()[[4]]), formula = y ~ x,  color="green")
+            # # geom_ribbon(data=keep(), aes(ymin=confidence_bands()[[2]], ymax=confidence_bands()[[4]]), linetype=2, alpha=0.1)
             
         
         
@@ -182,7 +192,7 @@ server = function(input, output) {
         if (is.null(input$target_upload)) {
             return (NULL)
         }
-        SL <- paste0(confidence_intervals(), ' years   ', '(', round(as.numeric(confidence_intervals())*365,0), ' days)')
+        SL <- paste0(lower_shelf_life(), ' years   ', '(', round(as.numeric(lower_shelf_life())*365,0), ' days)')
     })
     
     output$sample_table <- DT::renderDataTable({
@@ -216,7 +226,7 @@ server = function(input, output) {
                            fullDT = full_data_table(),
                            meltedDT = melted_data_table(),
                            shelf_life = summarizeData(melted_data_table(), as.numeric(input$threshold)),
-                           shelf_life_lower = confidence_intervals()
+                           shelf_life_lower = lower_shelf_life()
             )
             
             rmarkdown::render(tempReport, output_format = "pdf_document", output_file = file,
