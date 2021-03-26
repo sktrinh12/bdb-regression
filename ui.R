@@ -29,7 +29,9 @@ ui = tagList(
                                    'text/comma-separated-values',
                                    '.csv'
                                )),
-                     radioButtons('polynomial_order','Order of Polynomial', choices=c("Linear","2nd Order", "3rd Order"), inline=TRUE),
+                     radioButtons('polynomial_order','Order of Polynomial', choices=c("Linear","2nd Order", "3rd Order"), selected="2nd Order", inline=TRUE),
+                     uiOutput('warning_ui_polynomial_choice'),
+                     br(),
                      selectInput('CI', 'Confidence Interval', choices=c(0.85, 0.90, 0.95, 0.99), selected = 0.95),
                      textInput('threshold', '% of 4C Reference MFI Threshold', value=75),
                      checkboxGroupInput('conc_avgs', 'Regression Concentrations', choices = c(
@@ -72,44 +74,6 @@ ui = tagList(
                                             ),
                                             actionButton("exclude_reset", "Reset")
                                   ),
-                                  
-                                  # wellPanel(
-                                  #     fluidRow(
-                                  #         column(
-                                  #             6,
-                                  #             h4(p(strong(
-                                  #                 "Predicted Shelf-Life"
-                                  #             ))),
-                                  #             textOutput('shelf_life_output'),
-                                  #             tags$head(
-                                  #                 tags$style(
-                                  #                     "#shelf_life_output{color: #eb6864;
-                                  #                    font-size: 20px;
-                                  #                    font-weight: bold;
-                                  #                    }"
-                                  #                 )
-                                  #             ),
-                                  #             h4(p(
-                                  #                 strong("Predicted Shelf-Life w/ 95% Confidence")
-                                  #             )),
-                                  #             textOutput('shelf_life_lower_output'),
-                                  #             tags$head(
-                                  #                 tags$style(
-                                  #                     "#shelf_life_lower_output{color: #eb6864;
-                                  #                    font-size: 20px;
-                                  #                    font-weight: bold;
-                                  #                    }"
-                                  #                 )
-                                  #             ),
-                                  #             br(),
-                                  #             uiOutput('warning_ui')
-                                  #         ),
-                                  #         column(
-                                  #             6,
-                                  #             textAreaInput("notes", "Notes", placeholder = "Add any notes regarding your experiment or decisions to exclude data points.", height =
-                                  #                               "100px")
-                                  #         )
-                                  # )), # end of well panel
 
                                   fluidRow(column(
                                       6,wellPanel(
@@ -118,37 +82,25 @@ ui = tagList(
                                               h4(p(strong(
                                                   "Predicted Shelf-Life"
                                               ))),
-                                              textOutput('shelf_life_output'),
-                                              tags$head(
-                                                  tags$style(
-                                                      "#shelf_life_output{color: #eb6864;
-                                                     font-size: 20px;
-                                                     font-weight: bold;
-                                                     }"
-                                                  )
-                                              ),
+                                              uiOutput('check_shelf_life'),
                                               h4(p(
                                                   strong("Predicted Shelf-Life w/ 95% Confidence")
                                               )),
-                                              textOutput('shelf_life_lower_output'),
-                                              tags$head(
-                                                  tags$style(
-                                                      "#shelf_life_lower_output{color: #eb6864;
-                                                     font-size: 20px;
-                                                     font-weight: bold;
-                                                     }"
-                                                  )
-                                              ),
+                                              uiOutput('check_lower_shelf_life'),
                                               br(),
+                                              
                                               uiOutput('warning_ui_rsq'),
                                               uiOutput('warning_ui_slope')
                                           )),
                                           column(
                                               6,wellPanel(
-                                              textAreaInput("notes", "Notes", placeholder = "Add any notes regarding your experiment or decisions to exclude data points.", height =
-                                                                "120px")
+                                              textAreaInput("notes", "Notes", placeholder = "Add any notes regarding your experiment or decisions to exclude data points.", height ="120px")
                                           )
                                       )) # end of well panel
+                                  # tableOutput('coeffs'),
+                                  # uiOutput('best_fit'),
+                                  # textOutput('polynomial_eval_of_linearity')
+                                  # uiOutput('check_shelf_life')
                          )
                          
                      )

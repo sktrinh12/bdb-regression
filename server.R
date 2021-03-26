@@ -57,13 +57,21 @@ server = function(input, output) {
     })
     
     poly_order <- reactive({ order_of_polynomial(input$polynomial_order) })
+    fit <- reactive({ find_best_fit_equation(keep(), poly_order()) })
+
+    # best_fit_eqn <- reactive({ find_best_fit_equation(keep(), poly_order()) })
+    # r_sq <- reactive({ r_sq(best_fit_eqn()) })
+    # adj_r_sq <- reactive({ adj_r_sq(best_fit_eqn()) })
+    # coeff <- reactive({ coeff(best_fit_eqn(), poly_order()) })
+    # output$coeffs <- renderTable({ coeff() })
+    # output$best_fit <- renderUI({ best_fit_eqn() })
     
-    polyroot_shelf_life <- reactive({ solve_for_shelf_life(keep(), as.numeric(threshold_y()), poly_order()) })
-    output$polyroot <- renderText({ polyroot_shelf_life() })
+    shelf_life <- reactive({ solve_for_shelf_life(keep(), as.numeric(threshold_y()), poly_order()) })
+    output$polyroot <- renderText({ shelf_life() })
     melted_data_table <- reactive({meltedDataTable(full_data_table())})
     output$melt_out <- renderPrint({melted_data_table()})
     regression_data_table <- reactive({regressionDataTable(full_data_table())})
-    confidence_bands <- reactive({ reg_conf_intervals(keep(), poly_order(), as.numeric(confidenceInterval()), as.numeric(threshold_y())) })
+    confidence_bands <- reactive({ find_confidence_bands(keep(), poly_order(), as.numeric(confidenceInterval()), as.numeric(threshold_y())) })
     lower_shelf_life <- reactive({ solve_for_lower_shelf_life(keep(), poly_order(), as.numeric(confidenceInterval()), as.numeric(threshold_y() )) })
     
     slope <- reactive({ best_fit_equation(keep(), poly_order())$coefficients[[2]] })
@@ -72,10 +80,38 @@ server = function(input, output) {
 
     r_val <- reactive({ ifelse(R_sq_val() < 0.80, "UH OH", "All good :)") })
 
+    
+    # output$polynomial_eval_of_linearity <- renderText({ polynomial_evaluation_of_linearity(keep(), poly_order()) })
+    poly_eval <- reactive({ polynomial_evaluation_of_linearity(keep(), poly_order()) })
     output$rval <- renderText({ r_val() })
 
+    output$check_shelf_life <- renderUI({
+        if(is.null(shelf_life())){
+            'Shelf Life is NA'
+        }
+        else{
+            'Shelf Life works!'
+        }
+    })
     
     labels <- reactive({ labels_column(input$target_upload) })
+    
+    output$warning_ui_polynomial_choice <- renderUI({
+        req(input$target_upload)
+
+        if(poly_order() == 2 && poly_eval()$c_pvalue >= 0.05){
+            tags$i(" Warning: p-value for 2nd order not statistically significant. Consider using linear model instead.",
+                   class = "fa fa-exclamation-triangle", 
+                   style = "color: #fcba03; font-size: 20px"
+            )
+        }
+        else if(poly_order() == 3 && poly_eval()$d_pvalue >= 0.05){
+            tags$i(" Warning: p-value for 3rd order not statistically significant. Consider using 2nd order or linear model instead.",
+                   class = "fa fa-exclamation-triangle", 
+                   style = "color: #fcba03; font-size: 20px"
+            )
+        }
+    })
     
     output$warning_ui_rsq <- renderUI({
         req(input$target_upload)
@@ -114,7 +150,7 @@ server = function(input, output) {
         exclude <- melted_data_table()[!vals$keeprows, , drop = FALSE] 
         output$text1 <- renderPrint(keep)
         keep <- keep[complete.cases(keep),]
-        print(keep)
+        # print(keep)
         
         ggplot(keep, aes(x=Time, y=value, color=Concentrations)) + 
             # geom_smooth(data=keep, aes(x=Time), formula = y ~ poly(x,poly_order(), raw=TRUE), method="lm", col = "red", level=as.numeric(confidenceInterval())) +
@@ -179,13 +215,12 @@ server = function(input, output) {
     #     return (full_data_table())
     # })
     
-    
-    # When file uploaded, output shelf-life from linearRegression.R file
+    ########################## SHELF LIFE ##########################
     output$shelf_life_output <- renderText({
         if (is.null(input$target_upload)) {
             return (NULL)
         }
-        SL <- paste0(polyroot_shelf_life(), ' years   ', '(', round(as.numeric(polyroot_shelf_life())*365,0), ' days)')
+        SL <- paste0(shelf_life(), ' years   ', '(', round(as.numeric(shelf_life())*365,0), ' days)')
     })
     
     output$shelf_life_lower_output <- renderText({
@@ -193,6 +228,35 @@ server = function(input, output) {
             return (NULL)
         }
         SL <- paste0(lower_shelf_life(), ' years   ', '(', round(as.numeric(lower_shelf_life())*365,0), ' days)')
+    })
+    
+    output$check_shelf_life <- renderUI({
+        req(input$target_upload)
+        if(is.null(shelf_life())){
+            tags$i(" Does not intersect with MFI Threshold - No Shelf-life can be found",
+                   class = "fa fa-times-circle", 
+                   style = "color: red; font-size: 20px;"
+            )
+        }
+        else{
+            tags$i(paste0(round(shelf_life(),2), ' years   ', '(', round(as.numeric(shelf_life())*365,0), ' days)'),
+                   style="color: #eb6864; font-size: 20px; font-style: normal; font-weight: bold;"
+            )
+        }
+    })
+    output$check_lower_shelf_life <- renderUI({
+        req(input$target_upload)
+        if(is.null(lower_shelf_life())){
+            tags$i(" Does not intersect with MFI Threshold - No Shelf-life can be found",
+                   class = "fa fa-times-circle", 
+                   style = "color: red; font-size: 20px;"
+            )
+        }
+        else{
+            tags$i(paste0(round(lower_shelf_life(),2), ' years   ', '(', round(as.numeric(lower_shelf_life())*365,0), ' days)'),
+                   style="color: #eb6864; font-size: 20px; font-style: normal; font-weight: bold;"
+            )
+        }
     })
     
     output$sample_table <- DT::renderDataTable({
@@ -225,7 +289,7 @@ server = function(input, output) {
                            threshold = input$threshold,
                            fullDT = full_data_table(),
                            meltedDT = melted_data_table(),
-                           shelf_life = summarizeData(melted_data_table(), as.numeric(input$threshold)),
+                           shelf_life = shelf_life(),
                            shelf_life_lower = lower_shelf_life()
             )
             
