@@ -14,9 +14,31 @@ ui = tagList(
     navbarPage(
         theme = shinytheme("journal"),  # <--- To use a theme, uncomment this
         "Regression for Stability",
+        # tabPanel('Marker Information',
+        #          fluidRow(column(8,wellPanel(
+        #              fluidRow(
+        #                  column(4,textInput('specificity', "Specificity")),
+        #                  column(4,textInput('clone', 'Clone')),
+        #                  column(4,selectInput('fluorochrome', 'Fluorochrome', choices=c('BUV495', 'BUV789', 'UV455')))
+        #                  ),
+        #              fluidRow(
+        #                  column(4,selectInput('pop1', "Cell Population 1", choices=c('Lymph', 'Mono', 'Gran'))),
+        #                  column(4,selectInput('pop2', 'Cell Population 2', choices=c('Lymph', 'Mono', 'Gran'))),
+        #                  column(4,selectInput('pop3', 'Cell Population 3', choices=c('Lymph', 'Mono', 'Gran')))
+        #                  ),
+        #              fluidRow(
+        #                  column(4,textInput('employee_name', 'Name of Experimenter')),
+        #                  column(4, dateInput('analysis_date', 'Date of Analysis'))
+        #              )
+        #              )
+        #          ))),
         tabPanel("",
                  sidebarPanel(
                      includeHTML("analytics.html"),
+                     # fluidRow(
+                     #     column(4,textInput('specificity', "Specificity")),
+                     #     column(4,textInput('clone', 'Clone')),
+                     #     column(4,selectInput('fluorochrome', 'Fluorochrome', choices=c('BUV495', 'BUV789', 'UV455')))),
                      downloadButton("downloadData", "Download Stats Template"),
                      br(),
                      br(),
@@ -29,7 +51,7 @@ ui = tagList(
                                    'text/comma-separated-values',
                                    '.csv'
                                )),
-                     radioButtons('polynomial_order','Order of Polynomial', choices=c("Linear","2nd Order", "3rd Order"), selected="2nd Order", inline=TRUE),
+                     radioButtons('polynomial_order','Order of Polynomial', choices=c("Linear","2nd Order", "3rd Order"), selected="Linear", inline=TRUE),
                      uiOutput('warning_ui_polynomial_choice'),
                      br(),
                      selectInput('CI', 'Confidence Interval', choices=c(0.85, 0.90, 0.95, 0.99), selected = 0.95),
@@ -97,10 +119,7 @@ ui = tagList(
                                               textAreaInput("notes", "Notes", placeholder = "Add any notes regarding your experiment or decisions to exclude data points.", height ="120px")
                                           )
                                       )) # end of well panel
-                                  # tableOutput('coeffs'),
-                                  # uiOutput('best_fit'),
-                                  # textOutput('polynomial_eval_of_linearity')
-                                  # uiOutput('check_shelf_life')
+
                          )
                          
                      )

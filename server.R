@@ -14,6 +14,9 @@ server = function(input, output) {
                                 row.names=NULL
     )
     
+    output$tab_panel_title <- renderText({
+        input$pop1
+    })
     # Download Template Stats File
     output$downloadData <- downloadHandler(
         filename = 'stability_stats_template.csv',
@@ -144,6 +147,7 @@ server = function(input, output) {
     
     # output$text1 <- renderPrint(vals$keeprows)
     output$plot1 <- renderPlot({
+        req(input$target_upload)
         # Plot the kept and excluded points as two separate data sets
         # vals$keeprows <- rep(TRUE, nrow(melted_data_table()))
         keep    <- melted_data_table()[ vals$keeprows, , drop = FALSE] 
