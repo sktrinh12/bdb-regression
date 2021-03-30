@@ -35,6 +35,7 @@ ui = tagList(
         tabPanel("",
                  sidebarPanel(
                      includeHTML("analytics.html"),
+                     # textInput('author', "Author"),
                      # fluidRow(
                      #     column(4,textInput('specificity', "Specificity")),
                      #     column(4,textInput('clone', 'Clone')),
@@ -75,7 +76,8 @@ ui = tagList(
                          '2000 ng/test' = 8
                      )),
                      radioButtons('format', 'Document format', c('PDF', 'HTML', 'Word'), inline = TRUE),
-                     downloadButton("report", "Generate report", class = "btn-primary")
+                     downloadButton("report", "Generate report", class = "btn-primary"),
+                     downloadButton("rds_download", "Save Data for Report", class = "btn-secondary")
                  ),
                  mainPanel(
                      tabsetPanel(

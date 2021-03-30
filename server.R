@@ -3,6 +3,8 @@ example_file <- read.csv('stability_stats.csv')
 
 server = function(input, output) {
     
+
+    ########################## TEMPLATE DATA ##########################
     template_data <- data.frame('Time'=c(0,0.5,1,1.5,2,3,4,5), 
                                 'Conc_30_ng'=rep(NA, 8), 
                                 'Conc_60_ng'=rep(NA, 8),
@@ -14,9 +16,6 @@ server = function(input, output) {
                                 row.names=NULL
     )
     
-    output$tab_panel_title <- renderText({
-        input$pop1
-    })
     # Download Template Stats File
     output$downloadData <- downloadHandler(
         filename = 'stability_stats_template.csv',
@@ -24,7 +23,8 @@ server = function(input, output) {
             write.csv(template_data, file, row.names=FALSE)
         }
     )
-    
+
+    ########################## EXAMPLE DATA ###########################
     # Download Example Stats File
     output$downloadExample <- downloadHandler(
         filename = 'stability_stats_example.csv',
@@ -33,6 +33,7 @@ server = function(input, output) {
         }
     )
     
+    ########################## RAW DATA ###########################
     df_products_upload <- reactive({
         inFile <- input$target_upload
         if (is.null(inFile)) 
@@ -42,6 +43,22 @@ server = function(input, output) {
         return(df)
     })
     
+    raw_melted_data <- reactive({ meltedDataTable(df_products_upload()) })
+    raw_shelf_life <- reactive({ solve_for_shelf_life(raw_melted_data(), as.numeric(threshold_y()), poly_order()) })
+    raw_lower_shelf_life <- reactive({ solve_for_lower_shelf_life(raw_melted_data(), poly_order(), as.numeric(confidenceInterval()), as.numeric(threshold_y() )) })
+    raw_confidence_bands <- reactive({ find_confidence_bands(raw_melted_data(), poly_order(), as.numeric(confidenceInterval()), as.numeric(threshold_y())) })
+    
+    # melted_data_table <- reactive({meltedDataTable(full_data_table())})
+    # regression_data_table <- reactive({regressionDataTable(full_data_table())})
+    # 
+    # slope <- reactive({ best_fit_equation(keep(), poly_order())$coefficients[[2]] })
+    # 
+    #####################
+    
+    
+    output$tab_panel_title <- renderText({
+        input$pop1
+    })
     # Reactive User Inputs
     confidenceInterval <- reactive({input$CI})
     threshold_y <- reactive({input$threshold})
@@ -58,9 +75,8 @@ server = function(input, output) {
         
         return(conc_to_exclude(df_products_upload(), conc_avgs_list()))
     })
-    
+
     poly_order <- reactive({ order_of_polynomial(input$polynomial_order) })
-    fit <- reactive({ find_best_fit_equation(keep(), poly_order()) })
 
     # best_fit_eqn <- reactive({ find_best_fit_equation(keep(), poly_order()) })
     # r_sq <- reactive({ r_sq(best_fit_eqn()) })
@@ -185,6 +201,7 @@ server = function(input, output) {
         
     })
     keep    <- reactive({ melted_data_table()[ vals$keeprows, , drop = FALSE] })
+    exclude <- reactive({ melted_data_table()[!vals$keeprows, , drop = FALSE] })
     output$text1 <- renderPrint(keep())
     
     # Toggle points that are clicked
@@ -275,7 +292,13 @@ server = function(input, output) {
             formatRound(columns=c(2:ncol(df)), 0)
     })
     
-    
+
+    # output$rds_download <- downloadHandler(
+    #     filename = "f_df.Rdata",
+    #     content = function(file) {
+    #         write.csv(full_data_table(), file)
+    #     }
+    # )
     ################## R Markdown Report ######################
     output$report <- downloadHandler(
         
@@ -291,10 +314,40 @@ server = function(input, output) {
             # Set up parameters to pass to Rmd document
             params <- list(CI = input$CI,
                            threshold = input$threshold,
+                           order = input$polynomial_order,
                            fullDT = full_data_table(),
+                           raw_full_data = df_products_upload(),
                            meltedDT = melted_data_table(),
-                           shelf_life = shelf_life(),
-                           shelf_life_lower = lower_shelf_life()
+                           raw_melted_data = raw_melted_data(),
+                           shelf_life = paste0(
+                               round(shelf_life(),2),
+                               ' years (', 
+                               round(shelf_life()*365,0), 
+                               ' days)' ),
+                           shelf_life_lower = paste0(
+                               round(lower_shelf_life(),2),
+                               ' years (',
+                               round(lower_shelf_life()*365,0),
+                               ' days)'),
+                           notes = input$notes,
+                           author = input$author,
+                           raw_data = req(input$target_upload),
+                           confidence_bands = confidence_bands(),
+                           raw_confidence_bands = raw_confidence_bands(),
+                           poly_order = poly_order(),
+                           raw_shelf_life = paste0(
+                                                   round(raw_shelf_life(),2),
+                                                   ' years (', 
+                                                   round(raw_shelf_life()*365,0), 
+                                                   ' days)' ),
+                           raw_lower_shelf_life = paste0(
+                               round(raw_lower_shelf_life(),2),
+                               ' years (',
+                               round(raw_lower_shelf_life()*365,0),
+                               ' days)'),
+                           keep = keep(),
+                           exclude = exclude()
+
             )
             
             rmarkdown::render(tempReport, output_format = "pdf_document", output_file = file,

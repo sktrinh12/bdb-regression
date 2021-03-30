@@ -51,7 +51,7 @@ meltedDataTable <- function(df_full=template_data){
 
     dataMelt <- cbind(dataMelt, 'Labels'=paste0(parse_number(as.character(dataMelt$Concentrations)), ' ng/test'))
     # print('dataMelt: ')
-    # print(dataMelt)
+    print(dataMelt)
 
     
     return (dataMelt)
@@ -112,6 +112,7 @@ R_sq <- function(df_melt, order){
 best_fit_equation <- function(df_melt, order){
     fit <- lm(value ~ poly(Time,order, raw=TRUE), data=df_melt)
     print(fit)
+    print('here?')
     return(summary(fit))
 }
 # 
@@ -134,9 +135,7 @@ best_fit_equation <- function(df_melt, order){
 ########################################################################################################################
 ########################################################################################################################
 polynomial_evaluation_of_linearity <- function(df_melt, order){
-    print('are we in?')
     fit <- lm(value ~ poly(Time,order, raw=TRUE), data=df_melt)
-    print('what about here?')
     summary_regression <- summary(fit)
     p_values <- summary_regression$coefficients[,4]
     print('--------P-vALUES-----------')
@@ -231,7 +230,6 @@ solve_for_lower_shelf_life <- function(df_melt, order, CI, threshold_y){
 
     fit <- lm(y ~ poly(x,order,raw=TRUE),data=df_melt)
     summary_regression <- summary(fit)
-    
     a <- as.numeric(format(round(summary_regression$coefficients[[1]],2))) # y-intercept
     b <- as.numeric(format(round(summary_regression$coefficients[[2]],2))) # 1st order coeff
     c <- ifelse(order > 1, as.numeric(format(round(summary_regression$coefficients[[3]],2))), 0) # 2nd order coeff
@@ -322,6 +320,10 @@ solve_for_lower_shelf_life <- function(df_melt, order, CI, threshold_y){
 }
 
 find_confidence_bands <- function(df_melt, order, CI, threshold_y) {
+    print('DF MELT in CONFIDENCE BANDS')
+    print(df_melt)
+    df_melt <- na.omit(df_melt)
+    print(df_melt)
     y <- na.omit(df_melt$value)
     x <- na.omit(df_melt$Time)
     n <- length(y) # Find length of y to use as sample size
@@ -399,6 +401,8 @@ find_confidence_bands <- function(df_melt, order, CI, threshold_y) {
     bands <- data.frame(cbind(predict_df$x_new, predict_df$lwr, predict_df$fit, predict_df$upr))
     colnames(bands) <- c('X Values', 'Lower Confidence Band', 'Y Values', 'Upper Confidence Band')
 
+    print(bands)
+    print(dim(bands))
     
     return(bands)
 }
