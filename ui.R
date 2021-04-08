@@ -5,6 +5,7 @@ library(ggplot2)
 library(plotly)
 library(knitr)
 library(rmarkdown)
+library(readxl)
 
 source('global.R')
 example_file <- read.csv('stability_stats.csv')
@@ -40,12 +41,20 @@ ui = tagList(
                      #     column(4,textInput('specificity', "Specificity")),
                      #     column(4,textInput('clone', 'Clone')),
                      #     column(4,selectInput('fluorochrome', 'Fluorochrome', choices=c('BUV495', 'BUV789', 'UV455')))),
+                     fluidRow(column(7,selectizeInput('select_marker', 'Select Marker to Analyze', choices=NULL)),
+                              column(5,div(uiOutput('marker_optimal'), style='padding-top:25px;'))),
                      downloadButton("downloadData", "Download Stats Template"),
                      br(),
                      br(),
                      downloadButton("downloadExample", "Download Stats Example"),
                      br(),
                      br(),
+                     fileInput("raw_upload", "Choose raw stats file to upload",
+                               accept = c(
+                                   'text/csv',
+                                   'text/comma-separated-values',
+                                   '.csv'
+                               )),
                      fileInput('target_upload', 'Choose file to upload',
                                accept = c(
                                    'text/csv',
@@ -76,16 +85,36 @@ ui = tagList(
                          '2000 ng/test' = 8
                      )),
                      radioButtons('format', 'Document format', c('PDF', 'HTML', 'Word'), inline = TRUE),
-                     downloadButton("report", "Generate report", class = "btn-primary"),
-                     downloadButton("rds_download", "Save Data for Report", class = "btn-secondary")
+                     actionButton("write_results", "Save Summary Results to CSV", class = "btn-secondary"),
+                     downloadButton("report", "Generate report", class = "btn-primary")
+                     
                  ),
                  mainPanel(
                      tabsetPanel(
                          tabPanel("Stats Table",
                                   br(),
-                                  DT::dataTableOutput("sample_table")
+                                  DT::dataTableOutput("sample_table"),
+                                  br()
+                                  # fluidRow(column(6,plotOutput('mfi_vs_concentration')),
+                                  #          column(6,plotOutput('mfi_vs_time'))
+                                  # )
                                   
                                   
+                         ),tabPanel("Plots",
+                                    # br(),
+                                    # DT::dataTableOutput("sample_table"),
+                                    br(),
+                                    fluidRow(column(6,plotOutput('mfi_vs_concentration')),
+                                             column(6,plotOutput('mfi_vs_time'))
+                                    ),
+                                    br(),
+                                    fluidRow(column(6,plotOutput('stain_index')),
+                                             column(6,plotOutput('signal_to_noise'))
+                                    ),
+                                    br(),
+                                    fluidRow(column(6,plotOutput('percent_positive')),
+                                             # column(6,plotOutput('signal_to_noise'))
+                                    )
                          ),
                          tabPanel("Regression & Shelf-Life", 
                                   wellPanel(h4(p(strong("Regression Analysis for Stability"))), 
@@ -122,8 +151,21 @@ ui = tagList(
                                           )
                                       )) # end of well panel
 
-                         )
-                         
+                         ), #end of Regression & Shelf-Life tab panel
+                         tabPanel("Residuals & Model Check",
+                                  br(),
+                                  fluidRow(column(6,plotlyOutput('residual_plot')),
+                                           column(6,plotlyOutput('residual_histogram'))
+                                           ),
+                                  # tableOutput('second_order_results_output'),
+                                  # tableOutput('optimal_linear_results_output'),
+                                  # tableOutput('optimal_second_order_results_output'),
+                                  br(),
+                                  wellPanel(h3('Summary of Results'),
+                                            br(),
+                                            tableOutput('results_table'))
+                                  
+                         ) #end of Residuals tab panel
                      )
                  )
         )

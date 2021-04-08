@@ -1,7 +1,8 @@
 source('global.R')
 example_file <- read.csv('stability_stats.csv')
+wave_summary_file <- "wave5_summary.xlsx"
 
-server = function(input, output) {
+server = function(input, output, session) {
     
 
     ########################## TEMPLATE DATA ##########################
@@ -40,6 +41,16 @@ server = function(input, output) {
             return(NULL)
         df_unrounded <- read.csv(inFile$datapath, header = TRUE, sep = ',')
         df <- cbind('Time'=df_unrounded[[1]], round(df_unrounded[2:ncol(df_unrounded)]))
+        print(df)
+        print(df_unrounded)
+        return(df)
+    })
+    
+    raw_upload_data <- reactive({
+        inFile <- input$raw_upload
+        if(is.null(inFile))
+            return(NULL)
+        df <- read_xlsx(inFile$datapath)
         return(df)
     })
     
@@ -53,8 +64,24 @@ server = function(input, output) {
     # 
     # slope <- reactive({ best_fit_equation(keep(), poly_order())$coefficients[[2]] })
     # 
-    #####################
-    
+    ################################### PLOTS TAB ##################################################
+    output$mfi_vs_concentration <- renderPlot({ mfi_vs_concentration_plot(raw_upload_data()) })
+    output$mfi_vs_time <- renderPlot({ mfi_vs_time_plot(raw_upload_data()) })
+    output$stain_index <- renderPlot({ stain_index(raw_upload_data()) })
+    output$signal_to_noise <- renderPlot({ signal_to_noise(raw_upload_data()) })
+    output$percent_positive <- renderPlot({ percent_positive(raw_upload_data()) })
+    #############################################
+    optimal <- reactive({ wave_df()$`Optimal (ng/test)`[wave_df()$`Marker Description` == input$select_marker] })
+    wave_df <- reactive({ read_marker_data(wave_summary_file) })
+    output$marker_optimal <- renderUI({
+        tags$i(paste0('Optimal: ',optimal(), ' ng/test'),
+               style="color: #eb6864; font-size: 18px; font-style: normal; font-weight: bold; padding-top: 20px;"
+        )
+        
+    })
+    # renderText({ if(as.character(paste0(optimal(), ' ng/test')) == ) })
+    output$concentrations <- renderText({ input$conc_avgs })
+    updateSelectizeInput(session, 'select_marker', choices = c(read_marker_data(wave_summary_file)$`Marker Description`), server = TRUE)
     
     output$tab_panel_title <- renderText({
         input$pop1
@@ -176,8 +203,8 @@ server = function(input, output) {
             # geom_smooth(data=keep, aes(x=Time), formula = y ~ poly(x,poly_order(), raw=TRUE), method="lm", col = "red", level=as.numeric(confidenceInterval())) +
             geom_ribbon(data=keep, aes(x=Time, y=value, ymin=confidence_bands()[[2]], ymax=confidence_bands()[[4]]), formula = y ~ poly(x,poly_order(), raw=TRUE), method="lm", col = "red", level=as.numeric(confidenceInterval()), alpha=0.2) +
             geom_line(data=confidence_bands(), aes(x=confidence_bands()[[1]], y=confidence_bands()[[3]]), formula = y ~ poly(x,poly_order(), raw=TRUE), method="lm", col = "red") +
-            geom_point(size=10) + # plot with keep dataset points filled in only
-            geom_point(data = exclude, size = 10, shape = 21, fill = NA, color = 'black') +
+            geom_point(size=7) + # plot with keep dataset points filled in only
+            geom_point(data = exclude, size = 7, shape = 21, fill = NA, color = 'black') +
             labs(x = "Time (years)",
                  y = "% of 4C Reference MFI") +
             theme_minimal() +
@@ -186,10 +213,10 @@ server = function(input, output) {
                                # labels = c("30 ng/test", '60 ng/test', '125 ng/test', '250 ng/test', '500 ng/test', '1000 ng/test', '2000 ng/test')
             ) +
             stat_regline_equation(data=keep, aes(x=Time, y=value,label=paste(..eq.label.., ..rr.label..,..adj.rr.label.., sep = "~~~~~~")), formula = y ~ poly(x,poly_order(),raw=TRUE), method="lm", col="red",
-                                  label.x=1.5,
+                                  label.x.npc="center",
                                   label.y.npc="top",
                                   
-                                  size=7) +
+                                  size=5) +
             theme(text=element_text(size = 20)) 
             # geom_point(data=data.frame(confidence_bands()), aes(x=confidence_bands()[[1]], y=confidence_bands()[[2]]), formula = y ~ x, size=4, color="green") + 
             # geom_line(data=confidence_bands(), aes(x=confidence_bands()[[1]], y=confidence_bands()[[2]]), formula = y ~ x,  color="green") +
@@ -224,8 +251,16 @@ server = function(input, output) {
         vals$keeprows <- rep(TRUE, 64)
     })
     
+    output$residual_plot <- renderPlotly({ 
+        req(input$target_upload)
+        residual_vs_fit_plot(keep(), poly_order()) 
+        })
     
-    
+    resid_plot <- reactive({ residual_vs_fit_plot(keep(), poly_order())  })
+    output$residual_histogram <- renderPlotly({ 
+        req(input$target_upload)
+        residual_histogram(keep(), poly_order()) 
+        })
     # # When file uploaded, create plot
     # df_full <- eventReactive(input$target_upload,{
     #     
@@ -292,13 +327,30 @@ server = function(input, output) {
             formatRound(columns=c(2:ncol(df)), 0)
     })
     
+    raw_linear_results <- reactive({ results_summary(raw_melted_data(), 1, as.numeric(input$CI)) })
+    output$linear_results_output <- renderTable({ raw_linear_results() })
 
-    # output$rds_download <- downloadHandler(
-    #     filename = "f_df.Rdata",
-    #     content = function(file) {
-    #         write.csv(full_data_table(), file)
-    #     }
-    # )
+    optimal_linear_results <- reactive({ results_summary(optimal_data(), 1, as.numeric(input$CI)) })
+    output$optimal_linear_results_output <- renderTable({ optimal_linear_results() })
+    
+    raw_second_order_results <- reactive({ results_summary(raw_melted_data(), 2, as.numeric(input$CI)) })
+    output$second_order_results_output <- renderTable({ raw_second_order_results() })
+    
+    optimal_second_order_results <- reactive({ results_summary(optimal_data(), 2, as.numeric(input$CI)) })
+    output$optimal_second_order_results_output <- renderTable({ optimal_second_order_results() })
+    
+    optimal_data <- reactive({ meltedDataTable(conc_to_exclude(df_products_upload(), concentrations_around_optimal(optimal()))) })
+    
+    summary_table <- reactive({ tibble(rbind(cbind('Concentrations Included'='Raw','Model Order'='Linear',raw_linear_results()),
+                                             cbind('Concentrations Included'='Optimal +1/-2','Model Order'='Linear',optimal_linear_results()),
+                                             cbind('Concentrations Included'='Raw','Model Order'='2nd Order',raw_second_order_results()),
+                                             cbind('Concentrations Included'='Optimal +1/-2','Model Order'='2nd Order',optimal_second_order_results()))) })
+    
+    output$results_table <- renderTable({ summary_table() })
+    
+    
+    observeEvent(input$write_results, {
+        write_csv(summary_table(), 'summary_results_wave5.csv', append=TRUE) })
     ################## R Markdown Report ######################
     output$report <- downloadHandler(
         
@@ -347,7 +399,6 @@ server = function(input, output) {
                                ' days)'),
                            keep = keep(),
                            exclude = exclude()
-
             )
             
             rmarkdown::render(tempReport, output_format = "pdf_document", output_file = file,
