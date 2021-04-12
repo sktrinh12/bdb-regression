@@ -10,6 +10,7 @@ library(hash)
 # order <- 2
 
 template_data <- data.frame('Time'=c(0,0.5,1,1.5,2,3,4,5), 
+                            'Conc_15_ng'=rep(NA, 8),
                             'Conc_30_ng'=rep(NA, 8), 
                             'Conc_60_ng'=rep(NA, 8),
                             'Conc_125_ng'=rep(NA, 8),
@@ -38,15 +39,20 @@ conc_to_exclude <- function(df_from_GUI, cols_to_avg){
         df_selected <- dplyr::select(df_csv, c(list_cols))
     }
 
+    print(df_selected)
+    print(df_csv$Time)
+    # keep_conc <- df_selected
     keep_conc <- cbind('Time'=df_csv$Time, df_selected)
 
     
 
+    print(keep_conc)
     return (keep_conc)
 }
 
 concentrations_around_optimal <- function(optimal){
-    key <- c('30 ng/test',
+    key <- c('15 ng/test',
+             '30 ng/test',
              '60 ng/test',
              '125 ng/test',
              '250 ng/test',
@@ -54,12 +60,12 @@ concentrations_around_optimal <- function(optimal){
              '1000 ng/test',
              '2000 ng/test')
     
-    value <- c(2:8)
+    value <- c(2:9)
     
     h <- hash(key,value)
     optimal_key <- as.character(paste0(optimal, ' ng/test'))
     optimal_value <- as.numeric(values(h)[optimal_key])
-    
+    # print(optimal_value)
     if(optimal_value == max(value)){
         conc_around_optimal <- c(optimal_value-2, optimal_value-1, optimal_value)
     } else if(optimal_value == min(value)){
@@ -162,17 +168,17 @@ polynomial_evaluation_of_linearity <- function(df_melt, order){
     c_pvalue <- p_values[3]
     d_pvalue <- p_values[4]
     
-    print(paste('p-value of a: ', a_pvalue))
-    print(paste('p-value of b: ', b_pvalue))
-    print(paste('p-value of c: ', c_pvalue))
-    print(paste('p-value of d: ', d_pvalue))
+    # print(paste('p-value of a: ', a_pvalue))
+    # print(paste('p-value of b: ', b_pvalue))
+    # print(paste('p-value of c: ', c_pvalue))
+    # print(paste('p-value of d: ', d_pvalue))
     
     pvalue_df <- data.frame('a_pvalue'=a_pvalue,
                             'b_pvalue'=b_pvalue,
                             'c_pvalue'=c_pvalue,
                             'd_pvalue'=d_pvalue)
 
-    print(pvalue_df)
+    # print(pvalue_df)
     return(pvalue_df)
 }
 
@@ -239,10 +245,10 @@ solve_for_lower_shelf_life <- function(df_melt, order, CI, threshold_y){
     c <- ifelse(order > 1, as.numeric(format(round(summary_regression$coefficients[[3]],2))), 0) # 2nd order coeff
     d <- ifelse(order > 2, as.numeric(format(round(summary_regression$coefficients[[4]],2))), 0) # 3rd order coeff
     
-    print(paste("a: ", a))
-    print(paste("b: ", b))
-    print(paste("c: ", c))
-    print(paste("d: ", d))
+    # print(paste("a: ", a))
+    # print(paste("b: ", b))
+    # print(paste("c: ", c))
+    # print(paste("d: ", d))
 
     x_new <- seq(min(x), max(x), length.out = length(x))
     y_fit <- a + b*x_new + c*x_new^2 + d*x_new^3
@@ -267,10 +273,10 @@ solve_for_lower_shelf_life <- function(df_melt, order, CI, threshold_y){
     c_lower <- ifelse(order > 1, as.numeric(format(round(summary_regression_lower$coefficients[[3]],2))), 0) # 2nd order coeff
     d_lower <- ifelse(order > 2, as.numeric(format(round(summary_regression_lower$coefficients[[4]],2))), 0) # 3rd order coeff
     
-    print(paste("a_lower: ", a_lower))
-    print(paste("b_lower: ", b_lower))
-    print(paste("c_lower: ", c_lower))
-    print(paste("d_lower: ", d_lower))
+    # print(paste("a_lower: ", a_lower))
+    # print(paste("b_lower: ", b_lower))
+    # print(paste("c_lower: ", c_lower))
+    # print(paste("d_lower: ", d_lower))
     
     f1_lower <- function(x) a_lower + b_lower*x + c_lower*x^2 + d_lower*x^3
     f2_lower <- function(x) threshold_y
@@ -281,7 +287,7 @@ solve_for_lower_shelf_life <- function(df_melt, order, CI, threshold_y){
         shelf_life_lower = NULL
         return(shelf_life_lower)
     })
-    print(shelf_life_lower)
+    # print(shelf_life_lower)
     return(shelf_life_lower)
 }
 
@@ -375,8 +381,8 @@ residual_histogram <- function(df_melt, order){
     return(ggplotly(p))
 }
 
-read_marker_data <- function(wave_data){
-    wave_df <- read_xlsx(wave_data)
+read_marker_data <- function(wave_data, sheet="Sheet1"){
+    wave_df <- read_xlsx(wave_data, sheet)
     # print(wave_df)
     marker_info <- paste0(wave_df$`Target Species`,' ', wave_df$Specificity,' ', '(', wave_df$Clone, ')',' ', wave_df$Format)
     # print(marker_info)
@@ -396,7 +402,7 @@ results_summary <- function(data, order, CI){
              'Adj. R-squared' = adj_R_sq(data, order),
              'Model p-value' = round(ifelse(order == 2, as.numeric(polynomial_evaluation_of_linearity(data, order)$c_pvalue), as.numeric(polynomial_evaluation_of_linearity(data, order)$b_pvalue)),3)
          )
-     print(df)
+     # print(df)
      return(df)
 }
 
@@ -448,7 +454,6 @@ summarize_means <- function(df){
         ),
         .before = "75% Threshold, No CI"
     )
-    print(dim(df))
     return(tib)
 }
 
@@ -468,7 +473,7 @@ mfi_vs_concentration_plot <- function(df){
 }
 
 mfi_vs_time_plot <- function(df){
-    print(df)
+
     p <- ggplot(df, aes(x=as.factor(Condition), y=`MFI+`, group=Concentration, color=as.factor(Concentration))) + 
         geom_point(size=4) + 
         geom_line(size=1) + 
@@ -559,14 +564,355 @@ percent_of_4C_MFI <- function(df){
 # END GOAL: Determine the shelf-life for each combination and if it passes min. requirements
 # Determine which combination of criteria give us a) most conservative estimates that still pass, b) most passes, c) best shelf-life estimates that still pass
 
-loop_through_for_summary <- function(data_directory){
-    
-    for(file in list.files(data_directory)){
-        df <- read_csv(paste0(data_directory, "\\", file))
-        print(df)
+loop_through_for_summary <- function(data_directory, wave_summary_file, sheet, wave_number){
+    tib <- tibble("Filename"=NA,
+                  "Format"=NA,
+                  "Min. Shelf-Life (days)"=NA,
+                  "Age of 4C ref on test day (days)"=NA,
+                  "Concentrations Included"=NA,
+                  "Model Order"=NA,
+                  "75% Threshold, No CI"=NA,
+                  "80% Threshold, No CI"=NA,
+                  "75% Threshold, Lwr 95% CI"=NA,
+                  "80% Threshold, Lwr 95% CI"=NA
+                  # "75%, No CI Pass/Fail"=NA,
+                  # "80%, No CI Pass/Fail"=NA,
+                  # "75%, 95% CI Pass/Fail"=NA,
+                  # "80%, 95% CI Pass/Fail"=NA,
+                  # "R-squared Pass/Fail"=NA,
+                  # "Adj. R-squared Pass/Fail"=NA,
+                  # "Model p-value Pass/Fail"=NA
+                  )
+    # print(tib)
+    wave_summary <- read_xlsx(wave_summary_file, sheet=sheet)
+    # print(wave_summary)
+    files_to_analyze <- wave_summary$Filename
+    # for(file in unique(files_to_analyze)){
+    #     print(file)
+    # }
+    for(file in unique(files_to_analyze)){
+        df <- read_csv(paste0(data_directory, "\\", paste0(file, ".csv")), col_types = cols())
+        print(file)
+
+        file <- paste0(file, ".csv")
+        melted_df <- meltedDataTable(df)
+        wave_df <- read_marker_data(wave_summary_file, sheet)
+        optimal_value <- wave_df$`Optimal (ng/test)`[paste0(wave_df$`Filename`,".csv") == file]
+        optimal_df <- meltedDataTable(conc_to_exclude(df, concentrations_around_optimal(optimal_value)))
         
+        format <- wave_df$`Format`[paste0(wave_df$`Filename`,".csv") == file]
+        min_shelf_life <- wave_df$`Min. Shelf-Life (days)`[paste0(wave_df$`Filename`,".csv") == file]
+        age_of_ref <- wave_df$`Age of 4C ref on test day (days)`[paste0(wave_df$`Filename`,".csv") == file]
+
+        raw_linear_results <- results_summary(melted_df, 1, 0.95)
+        optimal_linear_results <- results_summary(optimal_df, 1, 0.95)
+        raw_second_order_results <- results_summary(melted_df, 2, 0.95)
+        optimal_second_order_results <- results_summary(optimal_df, 2, 0.95)
+        
+        summary <- tibble(rbind(raw_linear_results,
+                             optimal_linear_results,
+                             raw_second_order_results,
+                             optimal_second_order_results))
+        row_names <- tibble('Filename'=rep(file,4),
+                            "Format"=rep(format, 4),
+                            "Min. Shelf-Life (days)"=rep(min_shelf_life,4),
+                            "Age of 4C ref on test day (days)"=rep(age_of_ref,4),
+                            'Concentrations Included'=rep(c('Raw','Optimal +1/-2'),2),
+                            'Model Order'=c(rep('Linear',2),c(rep('Second Order',2))))
+        tib_new <- bind_cols(row_names, summary)
+        tib <- bind_rows(tib, tib_new)
     }
+    tib <- tib[2:nrow(tib),]
+
+    print(tib)
+    V1 <- as_tibble(ifelse(sapply(tibble(rep(NA, length(tib$Filename))), function(i) tib$`75% Threshold, No CI` < tib$`Min. Shelf-Life (days)` | is.na(tib$`75% Threshold, No CI`)),0, 1))
+    V2 <- as_tibble(ifelse(sapply(tibble(rep(NA, length(tib$Filename))), function(i) tib$`80% Threshold, No CI` < tib$`Min. Shelf-Life (days)` | is.na(tib$`80% Threshold, No CI`)),0, 1))
+    V3 <- as_tibble(ifelse(sapply(tibble(rep(NA, length(tib$Filename))), function(i) tib$`75% Threshold, Lwr 95% CI` < tib$`Min. Shelf-Life (days)` | is.na(tib$`75% Threshold, Lwr 95% CI`)),0, 1))
+    V4 <- as_tibble(ifelse(sapply(tibble(rep(NA, length(tib$Filename))), function(i) tib$`80% Threshold, Lwr 95% CI` < tib$`Min. Shelf-Life (days)` | is.na(tib$`80% Threshold, Lwr 95% CI`)),0, 1))
+
+    V5 <- as_tibble(ifelse(sapply(tibble(rep(NA, length(tib$Filename))), function(i) tib$`R-squared` >= 0.80),1, 0))
+    V6 <- as_tibble(ifelse(sapply(tibble(rep(NA, length(tib$Filename))), function(i) tib$`Adj. R-squared` >= 0.80),1, 0))
+    V7 <- as_tibble(ifelse(sapply(tibble(rep(NA, length(tib$Filename))), function(i) tib$`Model p-value` < 0.05),1, 0))
+    tib <- bind_cols(tib,V1, V2, V3, V4, V5, V6, V7)
+    names(tib)[14:20] <- c("75%, No CI Pass/Fail", "80%, No CI Pass/Fail", "75%, 95% CI Pass/Fail", "80%, 95% CI Pass/Fail", "R-squared Pass/Fail", "Adj. R-squared Pass/Fail", "Model p-value Pass/Fail")
+    print(tib[,14:20])
+    print(tib)
+    print(colnames(tib))
+    write_xlsx(tib, paste0(wave_number,"_summary_of_results.xlsx"))
     
 }
-# loop_through_for_summary("C:\\Users\\10294643\\Desktop\\Rotation 2 - San Diego\\Stability\\Wave 5\\MFI Data")
-# list.files("C:\\Users\\10294643\\Desktop\\Rotation 2 - San Diego\\Stability\\Wave 5\\MFI Data")
+
+
+# add_countif_analysis <- function(wave_summary){
+#     df <- read_xlsx("Wave3_summary_of_results.xlsx")
+#     
+#     df$`75%, No CI Pass/Fail` <- c(NA)
+#     df$Filename[[1]]
+#     df$`75%, No CI Pass/Fail`[[1]]
+#     as_tibble(sapply(df$`75%, No CI Pass/Fail`,function(i) ifelse(df$`75% Threshold, No CI`[[i]] < df$`Min. Shelf-Life (days)`[[i]], "DARN", "YAY!!")))
+#     df$`75%, No CI Pass/Fail` <- as_tibble(ifelse(sapply(tibble(rep(NA, length(df$Filename))), function(i) df$`75% Threshold, No CI` >= df$`Min. Shelf-Life (days)`),1, 0))
+#     df$`80%, No CI Pass/Fail` <- as_tibble(ifelse(sapply(tibble(rep(NA, length(df$Filename))), function(i) df$`80% Threshold, No CI` >= df$`Min. Shelf-Life (days)`),1, 0))
+#     df$`75%, 95% CI Pass/Fail` <- as_tibble(ifelse(sapply(tibble(rep(NA, length(df$Filename))), function(i) df$`75% Threshold, Lwr 95% CI` >= df$`Min. Shelf-Life (days)`),1, 0))
+#     df$`80%, 95% CI Pass/Fail` <- as_tibble(ifelse(sapply(tibble(rep(NA, length(df$Filename))), function(i) df$`80% Threshold, Lwr 95% CI` >= df$`Min. Shelf-Life (days)`),1, 0))
+#     df$`75%, 95% CI Pass/Fail` <- as_tibble(ifelse(sapply(tibble(rep(NA, length(df$Filename))), function(i) df$`75% Threshold, Lwr 95% CI` >= df$`Min. Shelf-Life (days)`),1, 0))
+#     
+#     df$`R-squared Pass/Fail` <- as_tibble(ifelse(sapply(tibble(rep(NA, length(df$Filename))), function(i) df$`R-squared` >= 0.80),1, 0))
+#     df$`Adj. R-squared Pass/Fail` <- as_tibble(ifelse(sapply(tibble(rep(NA, length(df$Filename))), function(i) df$`Adj. R-squared` >= 0.80),1, 0))
+#     df$`Model p-value Pass/Fail` <- as_tibble(ifelse(sapply(tibble(rep(NA, length(df$Filename))), function(i) df$`Model p-value` <= 0.05),1, 0))
+# 
+#     return(df)
+# }
+# summary(df[df$`Concentrations Included`=='Raw',11:17])
+
+find_optimal_combination <- function(summary_of_results_xlsx, wave_number){
+    df <- read_xlsx(summary_of_results_xlsx)
+    subset_summary <- df[,14:20]
+    colnames(subset_summary) <- c("75% Threshold, No CI", "80% Threshold, No CI", "75% Threshold, Lwr 95% CI", "80% Threshold, Lwr 95% CI", "R-squared", "Adj. R-squared", "Model p-value")
+
+    print(subset_summary)
+    new_df <- bind_cols(df[,c(1,5:6)], subset_summary)
+
+    initial_tibble <- tibble("Condition"= NA, "75% Threshold, No CI"=NA, "80% Threshold, No CI"=NA, "75% Threshold, Lwr 95% CI"=NA, "80% Threshold, Lwr 95% CI"=NA)
+    
+    linear <- sapply(4:7, function(i){
+        mean(new_df[new_df$`Model Order`=="Linear",][[i]])
+    })
+    second_order <- sapply(4:7, function(i){
+        mean(new_df[new_df$`Model Order`=="Second Order",][[i]])
+    })
+    raw <- sapply(4:7, function(i){
+        mean(new_df[new_df$`Concentrations Included`=="Raw",][[i]])
+    })
+    optimal <- sapply(4:7, function(i){
+        mean(new_df[new_df$`Concentrations Included`=="Optimal +1/-2",][[i]])
+    })
+    linear_raw <- sapply(4:7, function(i){
+        mean(new_df[new_df$`Model Order`=="Linear" & new_df$`Concentrations Included`=="Raw",][[i]])
+    })
+    linear_optimal <- sapply(4:7, function(i){
+        mean(new_df[new_df$`Model Order`=="Linear" & new_df$`Concentrations Included`=="Optimal +1/-2",][[i]])
+    })
+    second_order_raw <- sapply(4:7, function(i){
+        mean(new_df[new_df$`Model Order`=="Second Order" & new_df$`Concentrations Included`=="Raw",][[i]])
+    })
+    second_order_optimal <- sapply(4:7, function(i){
+        mean(new_df[new_df$`Model Order`=="Second Order" & new_df$`Concentrations Included`=="Optimal +1/-2",][[i]])
+    })
+    print("----------1.5y REQUIREMENT---------")
+    print(linear_raw)
+   
+    linear_tib <- tibble("Linear", linear[[1]], linear[[2]], linear[[3]], linear[[4]])
+    second_order_tib <- tibble("Second Order", second_order[[1]], second_order[[2]], second_order[[3]], second_order[[4]])
+    raw_tib <- tibble("Raw", raw[[1]], raw[[2]], raw[[3]], raw[[4]])
+    optimal_tib <- tibble("Optimal +1/-2", optimal[[1]], optimal[[2]], optimal[[3]], optimal[[4]])
+    linear_raw_tib <- tibble("Linear, Raw", linear_raw[[1]], linear_raw[[2]], linear_raw[[3]], linear_raw[[4]])
+    linear_optimal_tib <- tibble("Linear, Optimal +1/-2", linear_optimal[[1]], linear_optimal[[2]], linear_optimal[[3]], linear_optimal[[4]])
+    second_order_raw_tib <- tibble("Second Order, Raw", second_order_raw[[1]], second_order_raw[[2]], second_order_raw[[3]], second_order_raw[[4]])
+    second_order_optimal_tib <- tibble("Second Order, Optimal +1/-2", second_order_optimal[[1]], second_order_optimal[[2]], second_order_optimal[[3]], second_order_optimal[[4]])
+    dfs <- list(linear_tib, second_order_tib, raw_tib, optimal_tib, linear_raw_tib, linear_optimal_tib, second_order_raw_tib, second_order_optimal_tib)
+    
+    column_names <- c("Condition", "75% Threshold, No CI", "80% Threshold, No CI", "75% Threshold, Lwr 95% CI", "80% Threshold, Lwr 95% CI")
+    
+    new_tibs <- lapply(dfs, function(x) {
+        names(x) <- column_names
+        x
+    })
+   
+    mean_summary <- bind_rows(initial_tibble, new_tibs)
+    mean_summary <- mean_summary[2:nrow(mean_summary),]
+    write_xlsx(mean_summary, paste0(wave_number, "_all_mean_results.xlsx"))
+
+}
+
+
+find_optimal_combination_p_val <- function(summary_of_results_xlsx, wave_number){
+    df <- read_xlsx(summary_of_results_xlsx)
+    subset_summary <- df[,14:20]
+    colnames(subset_summary) <- c("75% Threshold, No CI", "80% Threshold, No CI", "75% Threshold, Lwr 95% CI", "80% Threshold, Lwr 95% CI", "R-squared", "Adj. R-squared", "Model p-value")
+    
+    new_df <- bind_cols(df[,c(1,5:6)], subset_summary)
+    initial_tibble <- tibble("Condition"= NA, "75% Threshold, No CI"=NA, "80% Threshold, No CI"=NA, "75% Threshold, Lwr 95% CI"=NA, "80% Threshold, Lwr 95% CI"=NA)
+    
+    linear <- sapply(4:7, function(i){
+        mean(new_df[new_df$`Model Order`=="Linear" & new_df$`Model p-value` == 1,][[i]])
+    })
+    second_order <- sapply(4:7, function(i){
+        mean(new_df[new_df$`Model Order`=="Second Order" & new_df$`Model p-value` == 1,][[i]])
+    })
+    raw <- sapply(4:7, function(i){
+        mean(new_df[new_df$`Concentrations Included`=="Raw" & new_df$`Model p-value` == 1,][[i]])
+    })
+    optimal <- sapply(4:7, function(i){
+        mean(new_df[new_df$`Concentrations Included`=="Optimal +1/-2" & new_df$`Model p-value` == 1,][[i]])
+    })
+    linear_raw <- sapply(4:7, function(i){
+        mean(new_df[new_df$`Model Order`=="Linear" & new_df$`Concentrations Included`=="Raw" & new_df$`Model p-value` == 1,][[i]])
+    })
+    linear_optimal <- sapply(4:7, function(i){
+        mean(new_df[new_df$`Model Order`=="Linear" & new_df$`Concentrations Included`=="Optimal +1/-2" & new_df$`Model p-value` == 1,][[i]])
+    })
+    second_order_raw <- sapply(4:7, function(i){
+        mean(new_df[new_df$`Model Order`=="Second Order" & new_df$`Concentrations Included`=="Raw" & new_df$`Model p-value` == 1,][[i]])
+    })
+    second_order_optimal <- sapply(4:7, function(i){
+        mean(new_df[new_df$`Model Order`=="Second Order" & new_df$`Concentrations Included`=="Optimal +1/-2" & new_df$`Model p-value` == 1,][[i]])
+    })
+    print("----------P-value---------")
+    print(linear_raw)
+    print(new_df[new_df$`Model Order`=="Linear" & new_df$`Model p-value` == 1,])
+    
+    linear_tib <- tibble("Linear", linear[[1]], linear[[2]], linear[[3]], linear[[4]])
+    second_order_tib <- tibble("Second Order", second_order[[1]], second_order[[2]], second_order[[3]], second_order[[4]])
+    raw_tib <- tibble("Raw", raw[[1]], raw[[2]], raw[[3]], raw[[4]])
+    optimal_tib <- tibble("Optimal +1/-2", optimal[[1]], optimal[[2]], optimal[[3]], optimal[[4]])
+    linear_raw_tib <- tibble("Linear, Raw", linear_raw[[1]], linear_raw[[2]], linear_raw[[3]], linear_raw[[4]])
+    linear_optimal_tib <- tibble("Linear, Optimal +1/-2", linear_optimal[[1]], linear_optimal[[2]], linear_optimal[[3]], linear_optimal[[4]])
+    second_order_raw_tib <- tibble("Second Order, Raw", second_order_raw[[1]], second_order_raw[[2]], second_order_raw[[3]], second_order_raw[[4]])
+    second_order_optimal_tib <- tibble("Second Order, Optimal +1/-2", second_order_optimal[[1]], second_order_optimal[[2]], second_order_optimal[[3]], second_order_optimal[[4]])
+    
+    dfs <- list(linear_tib, second_order_tib, raw_tib, optimal_tib, linear_raw_tib, linear_optimal_tib, second_order_raw_tib, second_order_optimal_tib)
+    column_names <- c("Condition", "75% Threshold, No CI", "80% Threshold, No CI", "75% Threshold, Lwr 95% CI", "80% Threshold, Lwr 95% CI")
+    
+    new_tibs <- lapply(dfs, function(x) {
+        names(x) <- column_names
+        x
+    })
+
+    mean_summary <- bind_rows(initial_tibble, new_tibs)
+    mean_summary <- mean_summary[2:nrow(mean_summary),]
+    write_xlsx(mean_summary, paste0(wave_number, "_p_val_mean_results.xlsx"))
+    
+}
+
+##################################################################################################3
+
+find_optimal_combination_p_val_r_sqd <- function(summary_of_results_xlsx, wave_number){
+    df <- read_xlsx(summary_of_results_xlsx)
+    subset_summary <- df[,14:20]
+    colnames(subset_summary) <- c("75% Threshold, No CI", "80% Threshold, No CI", "75% Threshold, Lwr 95% CI", "80% Threshold, Lwr 95% CI", "R-squared", "Adj. R-squared", "Model p-value")
+    
+    new_df <- bind_cols(df[,c(1,5:6)], subset_summary)
+    initial_tibble <- tibble("Condition"= NA, "75% Threshold, No CI"=NA, "80% Threshold, No CI"=NA, "75% Threshold, Lwr 95% CI"=NA, "80% Threshold, Lwr 95% CI"=NA)
+    
+    linear <- sapply(4:7, function(i){
+        mean(new_df[new_df$`Model Order`=="Linear" & new_df$`Model p-value` == 1 & new_df$`R-squared` == 1,][[i]])
+    })
+    second_order <- sapply(4:7, function(i){
+        mean(new_df[new_df$`Model Order`=="Second Order" & new_df$`Model p-value` == 1 & new_df$`R-squared` == 1,][[i]])
+    })
+    raw <- sapply(4:7, function(i){
+        mean(new_df[new_df$`Concentrations Included`=="Raw" & new_df$`Model p-value` == 1 & new_df$`R-squared` == 1,][[i]])
+    })
+    optimal <- sapply(4:7, function(i){
+        mean(new_df[new_df$`Concentrations Included`=="Optimal +1/-2" & new_df$`Model p-value` == 1 & new_df$`R-squared` == 1,][[i]])
+    })
+    linear_raw <- sapply(4:7, function(i){
+        mean(new_df[new_df$`Model Order`=="Linear" & new_df$`Concentrations Included`=="Raw" & new_df$`Model p-value` == 1 & new_df$`R-squared` == 1,][[i]])
+    })
+    linear_optimal <- sapply(4:7, function(i){
+        mean(new_df[new_df$`Model Order`=="Linear" & new_df$`Concentrations Included`=="Optimal +1/-2" & new_df$`Model p-value` == 1 & new_df$`R-squared` == 1,][[i]])
+    })
+    second_order_raw <- sapply(4:7, function(i){
+        mean(new_df[new_df$`Model Order`=="Second Order" & new_df$`Concentrations Included`=="Raw" & new_df$`Model p-value` == 1 & new_df$`R-squared` == 1,][[i]])
+    })
+    second_order_optimal <- sapply(4:7, function(i){
+        mean(new_df[new_df$`Model Order`=="Second Order" & new_df$`Concentrations Included`=="Optimal +1/-2" & new_df$`Model p-value` == 1 & new_df$`R-squared` == 1,][[i]])
+    })
+    print("----------P-value AND R^2---------")
+    print(linear)
+    print(new_df[new_df$`Model Order`=="Linear" & new_df$`Model p-value` == 1,])
+    print(mean(new_df[new_df$`Model Order`=="Linear" & new_df$`Concentrations Included`=="Raw",][[5]]))
+    
+    
+    linear_tib <- tibble("Linear", linear[[1]], linear[[2]], linear[[3]], linear[[4]])
+    second_order_tib <- tibble("Second Order", second_order[[1]], second_order[[2]], second_order[[3]], second_order[[4]])
+    raw_tib <- tibble("Raw", raw[[1]], raw[[2]], raw[[3]], raw[[4]])
+    optimal_tib <- tibble("Optimal +1/-2", optimal[[1]], optimal[[2]], optimal[[3]], optimal[[4]])
+    linear_raw_tib <- tibble("Linear, Raw", linear_raw[[1]], linear_raw[[2]], linear_raw[[3]], linear_raw[[4]])
+    linear_optimal_tib <- tibble("Linear, Optimal +1/-2", linear_optimal[[1]], linear_optimal[[2]], linear_optimal[[3]], linear_optimal[[4]])
+    second_order_raw_tib <- tibble("Second Order, Raw", second_order_raw[[1]], second_order_raw[[2]], second_order_raw[[3]], second_order_raw[[4]])
+    second_order_optimal_tib <- tibble("Second Order, Optimal +1/-2", second_order_optimal[[1]], second_order_optimal[[2]], second_order_optimal[[3]], second_order_optimal[[4]])
+    
+    dfs <- list(linear_tib, second_order_tib, raw_tib, optimal_tib, linear_raw_tib, linear_optimal_tib, second_order_raw_tib, second_order_optimal_tib)
+    column_names <- c("Condition", "75% Threshold, No CI", "80% Threshold, No CI", "75% Threshold, Lwr 95% CI", "80% Threshold, Lwr 95% CI")
+    
+    new_tibs <- lapply(dfs, function(x) {
+        names(x) <- column_names
+        x
+    })
+    
+    mean_summary <- bind_rows(initial_tibble, new_tibs)
+    mean_summary <- mean_summary[2:nrow(mean_summary),]
+    write_xlsx(mean_summary, paste0(wave_number, "_p_val_r_sqd_mean_results.xlsx"))
+    
+}
+
+
+
+find_optimal_combination_high_r_sqd <- function(summary_of_results_xlsx, wave_number){
+    df <- read_xlsx(summary_of_results_xlsx)
+    subset_summary <- df[,14:20]
+    colnames(subset_summary) <- c("75% Threshold, No CI", "80% Threshold, No CI", "75% Threshold, Lwr 95% CI", "80% Threshold, Lwr 95% CI", "R-squared", "Adj. R-squared", "Model p-value")
+    
+    new_df <- bind_cols(df[,c(1,5:6)], subset_summary)
+    initial_tibble <- tibble("Condition"= NA, "75% Threshold, No CI"=NA, "80% Threshold, No CI"=NA, "75% Threshold, Lwr 95% CI"=NA, "80% Threshold, Lwr 95% CI"=NA)
+    
+    linear <- sapply(4:7, function(i){
+        mean(new_df[new_df$`Model Order`=="Linear" & new_df$`Model p-value` == 1,][[i]])
+    })
+    second_order <- sapply(4:7, function(i){
+        mean(new_df[new_df$`Model Order`=="Second Order" & new_df$`Model p-value` == 1,][[i]])
+    })
+    raw <- sapply(8:9, function(i){
+        mean(new_df[new_df$`Concentrations Included`=="Raw" & new_df$`Model p-value` == 1,][[i]])
+    })
+    optimal <- sapply(8:9, function(i){
+        mean(new_df[new_df$`Concentrations Included`=="Optimal +1/-2" & new_df$`Model p-value` == 1,][[i]])
+    })
+    linear_raw <- sapply(8:9, function(i){
+        mean(new_df[new_df$`Model Order`=="Linear" & new_df$`Concentrations Included`=="Raw" & new_df$`Model p-value` == 1,][[i]])
+    })
+    linear_optimal <- sapply(8:9, function(i){
+        mean(new_df[new_df$`Model Order`=="Linear" & new_df$`Concentrations Included`=="Optimal +1/-2" & new_df$`Model p-value` == 1,][[i]])
+    })
+    second_order_raw <- sapply(8:9, function(i){
+        mean(new_df[new_df$`Model Order`=="Second Order" & new_df$`Concentrations Included`=="Raw" & new_df$`Model p-value` == 1,][[i]])
+    })
+    second_order_optimal <- sapply(8:9, function(i){
+        mean(new_df[new_df$`Model Order`=="Second Order" & new_df$`Concentrations Included`=="Optimal +1/-2" & new_df$`Model p-value` == 1,][[i]])
+    })
+   
+    
+    
+    linear_tib <- tibble("Linear", linear[[1]], linear[[2]])
+    second_order_tib <- tibble("Second Order", second_order[[1]], second_order[[2]])
+    raw_tib <- tibble("Raw", raw[[1]], raw[[2]])
+    optimal_tib <- tibble("Optimal +1/-2", optimal[[1]], optimal[[2]])
+    linear_raw_tib <- tibble("Linear, Raw", linear_raw[[1]], linear_raw[[2]])
+    linear_optimal_tib <- tibble("Linear, Optimal +1/-2", linear_optimal[[1]], linear_optimal[[2]])
+    second_order_raw_tib <- tibble("Second Order, Raw", second_order_raw[[1]], second_order_raw[[2]])
+    second_order_optimal_tib <- tibble("Second Order, Optimal +1/-2", second_order_optimal[[1]], second_order_optimal[[2]])
+    
+    dfs <- list(linear_tib, second_order_tib, raw_tib, optimal_tib, linear_raw_tib, linear_optimal_tib, second_order_raw_tib, second_order_optimal_tib)
+    column_names <- c("Condition", "R-Squared", "Adj. R-squared")
+    
+    new_tibs <- lapply(dfs, function(x) {
+        names(x) <- column_names
+        x
+    })
+    
+    mean_summary <- bind_rows(initial_tibble, new_tibs)
+    mean_summary <- mean_summary[2:nrow(mean_summary),]
+    write_xlsx(mean_summary, paste0(wave_number, "_high_r_sqd_mean_results.xlsx"))
+    
+}
+wave_overview_file <- "wave5_summary.xlsx"
+summary_xlsx_file <- "Wave5_summary_of_results.xlsx"
+wave_number <- "Wave5"
+# loop_through_for_summary("C:\\Users\\10294643\\Desktop\\Rotation 2 - San Diego\\Stability\\Wave 5\\MFI Data", wave_overview_file, "Sheet1", wave_number)
+# 
+# # # list.files("C:\\Users\\10294643\\Desktop\\Rotation 2 - San Diego\\Stability\\Wave 5\\MFI Data", "Wave5")
+# find_optimal_combination(summary_xlsx_file, wave_number)
+# find_optimal_combination_p_val(summary_xlsx_file, wave_number)
+# find_optimal_combination_p_val_r_sqd(summary_xlsx_file, wave_number)
+# find_optimal_combination_high_r_sqd(summary_xlsx_file, wave_number)

@@ -1,12 +1,13 @@
 source('global.R')
 example_file <- read.csv('stability_stats.csv')
-wave_summary_file <- "wave5_summary.xlsx"
+wave_summary_file <- "wave6_summary.xlsx"
 
 server = function(input, output, session) {
     
 
     ########################## TEMPLATE DATA ##########################
     template_data <- data.frame('Time'=c(0,0.5,1,1.5,2,3,4,5), 
+                                'Conc_15_ng'=rep(NA, 8),
                                 'Conc_30_ng'=rep(NA, 8), 
                                 'Conc_60_ng'=rep(NA, 8),
                                 'Conc_125_ng'=rep(NA, 8),
@@ -39,12 +40,71 @@ server = function(input, output, session) {
         inFile <- input$target_upload
         if (is.null(inFile)) 
             return(NULL)
-        df_unrounded <- read.csv(inFile$datapath, header = TRUE, sep = ',')
-        df <- cbind('Time'=df_unrounded[[1]], round(df_unrounded[2:ncol(df_unrounded)]))
-        print(df)
-        print(df_unrounded)
+        df_unrounded <- read_csv(inFile$datapath)
+        if(is.na(df_unrounded$Conc_15_ng)) {
+            print('its NA')
+        }
+        # df <- cbind('Time'=df_unrounded[[1]], round(df_unrounded[2:ncol(df_unrounded)]))
+        df <- df_unrounded
         return(df)
     })
+    
+    output$concentration_checkGroupInput <-
+        renderUI({
+            if ( all(is.na(df_products_upload()$Conc_15_ng)) ) {
+                checkboxGroupInput(
+                    'conc_avgs',
+                    'Regression Concentrations',
+                    choices = c(
+                        '15 ng/test' = 2,
+                        '30 ng/test' = 3,
+                        '60 ng/test' = 4,
+                        '125 ng/test' = 5,
+                        '250 ng/test' = 6,
+                        '500 ng/test' = 7,
+                        '1000 ng/test' = 8,
+                        '2000 ng/test' = 9
+                    ),
+                    selected = c(
+                        # '15 ng/test' = 2,
+                        '30 ng/test' = 3,
+                        '60 ng/test' = 4,
+                        '125 ng/test' = 5,
+                        '250 ng/test' = 6,
+                        '500 ng/test' = 7,
+                        '1000 ng/test' = 8,
+                        '2000 ng/test' = 9
+                    )
+                )
+            }
+            else{
+                checkboxGroupInput(
+                    'conc_avgs',
+                    'Regression Concentrations',
+                    choices = c(
+                        '15 ng/test' = 2,
+                        '30 ng/test' = 3,
+                        '60 ng/test' = 4,
+                        '125 ng/test' = 5,
+                        '250 ng/test' = 6,
+                        '500 ng/test' = 7,
+                        '1000 ng/test' = 8,
+                        '2000 ng/test' = 9
+                    ),
+                    selected = c(
+                        '15 ng/test' = 2,
+                        '30 ng/test' = 3,
+                        '60 ng/test' = 4,
+                        '125 ng/test' = 5,
+                        '250 ng/test' = 6,
+                        '500 ng/test' = 7,
+                        '1000 ng/test' = 8,
+                        '2000 ng/test' = 9
+                    )
+                )
+            }
+            
+        })
     
     raw_upload_data <- reactive({
         inFile <- input$raw_upload
@@ -65,11 +125,26 @@ server = function(input, output, session) {
     # slope <- reactive({ best_fit_equation(keep(), poly_order())$coefficients[[2]] })
     # 
     ################################### PLOTS TAB ##################################################
-    output$mfi_vs_concentration <- renderPlot({ mfi_vs_concentration_plot(raw_upload_data()) })
-    output$mfi_vs_time <- renderPlot({ mfi_vs_time_plot(raw_upload_data()) })
-    output$stain_index <- renderPlot({ stain_index(raw_upload_data()) })
-    output$signal_to_noise <- renderPlot({ signal_to_noise(raw_upload_data()) })
-    output$percent_positive <- renderPlot({ percent_positive(raw_upload_data()) })
+    output$mfi_vs_concentration <- renderPlot({
+        req(input$raw_upload)
+        mfi_vs_concentration_plot(raw_upload_data())
+    })
+    output$mfi_vs_time <- renderPlot({
+        req(input$raw_upload)
+        mfi_vs_time_plot(raw_upload_data())
+    })
+    output$stain_index <- renderPlot({
+        req(input$raw_upload)
+        stain_index(raw_upload_data())
+    })
+    output$signal_to_noise <- renderPlot({
+        req(input$raw_upload)
+        signal_to_noise(raw_upload_data())
+    })
+    output$percent_positive <- renderPlot({
+        req(input$raw_upload)
+        percent_positive(raw_upload_data())
+    })
     #############################################
     optimal <- reactive({ wave_df()$`Optimal (ng/test)`[wave_df()$`Marker Description` == input$select_marker] })
     wave_df <- reactive({ read_marker_data(wave_summary_file) })
@@ -341,7 +416,8 @@ server = function(input, output, session) {
     
     optimal_data <- reactive({ meltedDataTable(conc_to_exclude(df_products_upload(), concentrations_around_optimal(optimal()))) })
     
-    summary_table <- reactive({ tibble(rbind(cbind('Concentrations Included'='Raw','Model Order'='Linear',raw_linear_results()),
+    summary_table <- reactive({ req(input$target_upload)
+        tibble(rbind(cbind('Concentrations Included'='Raw','Model Order'='Linear',raw_linear_results()),
                                              cbind('Concentrations Included'='Optimal +1/-2','Model Order'='Linear',optimal_linear_results()),
                                              cbind('Concentrations Included'='Raw','Model Order'='2nd Order',raw_second_order_results()),
                                              cbind('Concentrations Included'='Optimal +1/-2','Model Order'='2nd Order',optimal_second_order_results()))) })

@@ -66,24 +66,27 @@ ui = tagList(
                      br(),
                      selectInput('CI', 'Confidence Interval', choices=c(0.85, 0.90, 0.95, 0.99), selected = 0.95),
                      textInput('threshold', '% of 4C Reference MFI Threshold', value=75),
-                     checkboxGroupInput('conc_avgs', 'Regression Concentrations', choices = c(
-                         '30 ng/test' = 2, 
-                         '60 ng/test' = 3,
-                         '125 ng/test' = 4,
-                         '250 ng/test' = 5,
-                         '500 ng/test' = 6,
-                         '1000 ng/test' = 7,
-                         '2000 ng/test' = 8
-                     ),
-                     selected = c(
-                         '30 ng/test' = 2, 
-                         '60 ng/test' = 3,
-                         '125 ng/test' = 4,
-                         '250 ng/test' = 5,
-                         '500 ng/test' = 6,
-                         '1000 ng/test' = 7,
-                         '2000 ng/test' = 8
-                     )),
+                     uiOutput('concentration_checkGroupInput'),
+                     # checkboxGroupInput('conc_avgs', 'Regression Concentrations', choices = c(
+                     #     '15 ng/test' = 2,
+                     #     '30 ng/test' = 3,
+                     #     '60 ng/test' = 4,
+                     #     '125 ng/test' = 5,
+                     #     '250 ng/test' = 6,
+                     #     '500 ng/test' = 7,
+                     #     '1000 ng/test' = 8,
+                     #     '2000 ng/test' = 9
+                     # ),
+                     #     selected = c(
+                     #     '15 ng/test' = 2,
+                     #     '30 ng/test' = 3,
+                     #     '60 ng/test' = 4,
+                     #     '125 ng/test' = 5,
+                     #     '250 ng/test' = 6,
+                     #     '500 ng/test' = 7,
+                     #     '1000 ng/test' = 8,
+                     #     '2000 ng/test' = 9
+                     # )),
                      radioButtons('format', 'Document format', c('PDF', 'HTML', 'Word'), inline = TRUE),
                      actionButton("write_results", "Save Summary Results to CSV", class = "btn-secondary"),
                      downloadButton("report", "Generate report", class = "btn-primary")
@@ -95,9 +98,6 @@ ui = tagList(
                                   br(),
                                   DT::dataTableOutput("sample_table"),
                                   br()
-                                  # fluidRow(column(6,plotOutput('mfi_vs_concentration')),
-                                  #          column(6,plotOutput('mfi_vs_time'))
-                                  # )
                                   
                                   
                          ),tabPanel("Plots",
