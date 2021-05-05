@@ -6,6 +6,8 @@ library(plotly)
 library(knitr)
 library(rmarkdown)
 library(readxl)
+library(officer)
+library(flextable)
 
 source('global.R')
 example_file <- read.csv('stability_stats.csv')
@@ -89,7 +91,9 @@ ui = tagList(
                      # )),
                      radioButtons('format', 'Document format', c('PDF', 'HTML', 'Word'), inline = TRUE),
                      actionButton("write_results", "Save Summary Results to CSV", class = "btn-secondary"),
-                     downloadButton("report", "Generate report", class = "btn-primary")
+                     downloadButton("report", "Generate report", class = "btn-primary"),
+                     downloadButton("pptx_id", "Download PPT", class = "btn-primary")
+                     # downloadButton("download_powerpoint", "Generate PPT", class = 'btn-secondary')
                      
                  ),
                  mainPanel(
@@ -98,7 +102,7 @@ ui = tagList(
                                   br(),
                                   DT::dataTableOutput("sample_table"),
                                   br()
-                                  
+
                                   
                          ),tabPanel("Plots",
                                     # br(),
