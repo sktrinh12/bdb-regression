@@ -1,6 +1,6 @@
 source('global.R')
 example_file <- read.csv('stability_stats.csv')
-wave_summary_file <- "wave6_summary.xlsx"
+wave_summary_file <- "wave5_summary.xlsx"
 mypptx <- read_pptx("bd_template_homemade.pptx")
 server = function(input, output, session) {
     
