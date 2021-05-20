@@ -436,12 +436,36 @@ residual_histogram <- function(df_melt, order){
     p <- ggplot(df_melt,aes(x=fit_residuals, label=Time)) + 
         geom_histogram(binwidth=sd(fit_residuals), boundary=0, fill = '#eb6864') +
         labs(title = 'Histogram of Residuals',
-             subtitle = "Generally, 95% of residuals should not be larger than 2x the standard deviation of the residuals.",
+             # subtitle = "Generally, 95% of residuals should not be larger than 2x the standard deviation of the residuals.",
              x = 'Residuals', 
              y = '# of Residuals')
     
     
-    return(ggplotly(p))
+    return(p)
+}
+
+find_residuals <- function(df_melt, order){
+    df_melt <- na.omit(df_melt)
+    
+    x <- na.omit(df_melt$Time)
+    y <- na.omit(df_melt$value)
+    n <- length(x)
+    fit <- lm(y ~ poly(x,order, raw=TRUE), data=df_melt)
+    fit_residuals <- resid(fit)
+    
+    return(fit_residuals)
+}
+
+normal_probability_plot <- function(df_melt, order, residuals){
+    
+    # And adding line with proper properties
+    p <- ggplot(mapping = aes(sample = residuals)) + 
+        stat_qq_point(size = 3,color = "#eb6864") + 
+        stat_qq_line(color="black") +
+        xlab("Theoretical Quantiles") + ylab("Residuals") +
+        theme(text=element_text(size = 11))
+    print(p)
+    return(p)
 }
 
 read_marker_data <- function(wave_data, sheet="Sheet1"){
@@ -452,6 +476,19 @@ read_marker_data <- function(wave_data, sheet="Sheet1"){
     # print(wave_df$`Optimal (ng/test)`[wave_df$Specificity=='Integrin'])
     wave_df <- tibble(cbind(wave_df, 'Marker Description'=marker_info))
     return(wave_df)
+}
+
+
+
+anderson_darling_normality_test <- function(residuals){
+    ad <- ad.test(residuals)
+    # print(ad)
+    # sqrt(ad$statistic^2)
+    p_value <- ad$p.value
+    
+    # null hypothesis is that data DOES follow normal distribution
+    # can reject null hypothesis if p-value < 0.05 --> meaning we can say with sufficient evidence that data does NOT follow normal distribution
+    return(p_value)
 }
 
 

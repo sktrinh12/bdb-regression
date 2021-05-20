@@ -513,11 +513,44 @@ server = function(input, output, session) {
                      "Lower 95% CI" = c(round(solve_for_lower_shelf_life(raw_melted_data(), poly_order(), 0.95, 75),1),
                                         round(solve_for_lower_shelf_life(raw_melted_data(), poly_order(), 0.95, 80),1))
         )})
+    
+    
+    raw_shelf_life_summary_flextable <- reactive({ 
+        df <- tibble("Shelf-Life (days)" = c(round(solve_for_lower_shelf_life(raw_melted_data(), poly_order(), 0.95, 75),1)*365),
+                     "Shelf-Life (years)" = c(round(solve_for_lower_shelf_life(raw_melted_data(), poly_order(), 0.95, 75),1)),
+                     "R-squared" = c(R_sq_val()),
+                     "Model p-value"=c(format(round(poly_eval()$b_pvalue,2), nsmall = 3))
+        )})
+    modified_shelf_life_summary_flextable <- reactive({ 
+        df <- tibble("Shelf-Life (days)" = c(round(solve_for_lower_shelf_life(keep(), poly_order(), 0.95, 75),1)*365),
+                     "Shelf-Life (years)" = c(round(solve_for_lower_shelf_life(keep(), poly_order(), 0.95, 75),1)),
+                     "R-squared" = c(R_sq_val()),
+                     "Model p-value"=c(format(round(poly_eval()$b_pvalue,2), nsmall = 3))
+        )})
+    
     summary_flextable <- reactive({
         
         df <- tibble("Model Parameter"=c("R-squared", "p-value"),
                      "Value"=c(R_sq_val(), format(round(poly_eval()$b_pvalue,2), nsmall = 2))
         )
+    })
+    
+    raw_anderson_darling_flextable <- reactive({
+        df <-
+            tibble("Anderson-Darling Normality Test p-value" = c(
+                format(round(
+                    anderson_darling_normality_test(find_residuals(raw_melted_data(),poly_order())), 
+                    3), nsmall = 3))
+            )
+    })
+    
+    modified_anderson_darling_flextable <- reactive({
+        df <- 
+            tibble("Anderson-Darling Normality Test p-value" = c(
+                format(round(
+                    anderson_darling_normality_test(find_residuals(keep(),poly_order())), 
+                    3), nsmall = 3))
+            )
     })
     
     raw_linear_results <- reactive({ results_summary(raw_melted_data(), 1, as.numeric(input$CI)) })
@@ -617,10 +650,18 @@ server = function(input, output, session) {
         ),
         dummy_text
     )
+    label_fp <- fp_text(bold = TRUE, color = "black", font.size = 16)
+    note_fp <- fp_text(bold = FALSE, color = "black", font.size = 16)
     notes_reactive <- reactive({
-        bl2 <- block_list(fpar(ftext(input$notes)))
+
+        bl2 <- block_list(fpar(ftext("Notes: ", label_fp), ftext(input$notes, note_fp)))
     })
     
+    ######################## RESIDUAL PLOTS ###################################
+    resids <- reactive({ find_residuals(raw_melted_data(), poly_order()) })
+    # residual_vs_fit_plot_raw <- reactive({ residual_vs_fit_plot(raw_melted_data(), poly_order()) })
+    # residual_vs_fit_plot_modified <- reactive({ residual_vs_fit_plot(keep(), poly_order()) })
+    # residual_hist_plot <- reactive({ residual_histogram(raw_melted_data(), poly_order()) })
     ########################## Powerpoint Output ##############################
     output$pptx_id <- downloadHandler(
         filename = function(){
@@ -698,50 +739,75 @@ server = function(input, output, session) {
                     location = ph_location_type(type = "pic")
                 ) %>%
                 ph_with(
-                    value = flextable(raw_shelf_life_flextable(), cwidth=1.5) %>% 
-                        # add_header('MFI Threshold' =  "Shelf-Life Prediction (years)",
-                        #            `No CI` =  "Shelf-Life Prediction (years)", `Lower 95% CI` =  "Shelf-Life Prediction (years)",
-                        #            top = TRUE ) %>%
-                        # add_header_row(values = "Shelf-Life Prediction (years)", colwidths = c(3)) %>%
-                        # merge_at(i=1, j=1:3, part="header") %>%
-                        merge_v(j = "MFI Threshold") %>%
-                        add_header_lines("Shelf-Life Prediction (years)") %>%
-                        # add_header_lines(values = c("Shelf-Life Prediction (years)"), top = TRUE) %>%
-                        bold(i = 1:2, bold = TRUE, part = "header") %>%
-                        padding(padding.top = 20, padding.bottom = 10, part="all") %>%
-                        
+                    value = flextable(raw_shelf_life_summary_flextable(), cwidth=1.2) %>%
+                        bold(i = 1, bold = TRUE, part = "header") %>%
                         bg(bg = "#FBF59E", part = "header") %>%
                         align(align="center", part="all") %>%
-                        fontsize(size = 12, part = "header") %>%
-                        fontsize(size = 16, part = "body") %>%
+                        fontsize(size = 14, part = "body") %>%
                         hline_top(part = "all", border = fp_border(color="black", width=2)),
                     location = ph_location_type(type = "body", position_right = F, position_top = F)
                 ) %>%
+                # ph_with(
+                #     value = flextable(summary_flextable(), cwidth=1.5) %>% 
+                #         bg(bg = "#FBF59E", part = "header") %>%
+                #         align(align="center", part="all") %>%
+                #         fontsize(size = 12, part = "header") %>%
+                #         fontsize(size = 16, part = "body"),
+                #     location = ph_location_type(type = "body", position_right = F, index=9)
+                # ) %>%
+                # ################### REGRESSION SUMMARY SLIDE - RAW ##################
+                # add_slide(layout = "Content with Caption", master = "Office Theme") %>%
+                # ph_with(
+                #     value = "P1: Regression Summary - All Data", 
+                #     location = ph_location_type(type = "title")
+                # ) %>%
+                # ph_with(
+                #     value = residual_vs_fit_plot(keep(), poly_order()),
+                #     location = ph_location_type(type = "body", position_right = T)
+                # ) %>%
+                # ph_with(
+                #     value = flextable(summary_flextable(), cwidth=1.5) %>% 
+                #         bg(bg = "#FBF59E", part = "header") %>%
+                #         align(align="center", part="all") %>%
+                #         fontsize(size = 12, part = "header") %>%
+                #         fontsize(size = 16, part = "body"),
+                #     location = ph_location_type(type = "body", position_right = F)   
+                # ) %>%
+                ################## RESIDUAL VS FIT AND HISTOGRAM - RAW ##################
+            add_slide(layout = "Two Content", master = "Office Theme") %>%
                 ph_with(
-                    value = flextable(summary_flextable(), cwidth=1.5) %>% 
-                        bg(bg = "#FBF59E", part = "header") %>%
-                        align(align="center", part="all") %>%
-                        fontsize(size = 12, part = "header") %>%
-                        fontsize(size = 16, part = "body"),
-                    location = ph_location_type(type = "body", position_right = F, index=9)
-                ) %>%
-                ################### REGRESSION SUMMARY SLIDE - RAW ##################
-                add_slide(layout = "Content with Caption", master = "Office Theme") %>%
-                ph_with(
-                    value = "P1: Regression Summary - All Data", 
+                    value = "Residuals", 
                     location = ph_location_type(type = "title")
                 ) %>%
                 ph_with(
-                    value = residual_vs_fit_plot(keep(), poly_order()),
-                    location = ph_location_type(type = "body", position_right = T)
+                    value = residual_vs_fit_plot(raw_melted_data(), poly_order()), 
+                    location = ph_location_type(type = "body", index = 4, position_right = F)
                 ) %>%
                 ph_with(
-                    value = flextable(summary_flextable(), cwidth=1.5) %>% 
+                    value = residual_histogram(raw_melted_data(), poly_order()), 
+                    location = ph_location_type(type = "body", index = 3, position_right = T)
+                ) %>%
+                ################## NORMALITY OF RESIDUALS - RAW ##################
+            add_slide(layout = "Two Content", master = "Office Theme") %>%
+                ph_with(
+                    value = "Normality of Residuals", 
+                    location = ph_location_type(type = "title")
+                ) %>%
+                ph_with(
+                    value = normal_probability_plot(raw_melted_data(), poly_order(), find_residuals(raw_melted_data(), poly_order())), 
+                    location = ph_location_type(type = "body", index = 4, position_right = F)
+                ) %>%
+                # ph_with(
+                #     value = anderson_darling_flextable(), 
+                #     location = ph_location_type(type = "body", index = 3, position_right = T)
+                # ) %>%
+                ph_with(
+                    value = flextable(raw_anderson_darling_flextable(), cwidth=3) %>% 
                         bg(bg = "#FBF59E", part = "header") %>%
                         align(align="center", part="all") %>%
                         fontsize(size = 12, part = "header") %>%
                         fontsize(size = 16, part = "body"),
-                    location = ph_location_type(type = "body", position_right = F)   
+                    location = ph_location_type(type = "body", left = 7, index = 3, position_right = T)
                 ) %>%
                 ################### REGRESSION SLIDE - UPDATED ##################
             add_slide(layout = "Picture with Caption", master = "Office Theme") %>%
@@ -764,54 +830,79 @@ server = function(input, output, session) {
                     location = ph_location_type(type = "pic")
                 ) %>%
                 ph_with(
-                    value = flextable(shelf_life_flextable(), cwidth=1.5) %>% 
-                        # add_header('MFI Threshold' =  "Shelf-Life Prediction (years)",
-                        #            `No CI` =  "Shelf-Life Prediction (years)", `Lower 95% CI` =  "Shelf-Life Prediction (years)",
-                        #            top = TRUE ) %>%
-                        # add_header_row(values = "Shelf-Life Prediction (years)", colwidths = c(3)) %>%
-                        # merge_at(i=1, j=1:3, part="header") %>%
-                        merge_v(j = "MFI Threshold") %>%
-                        add_header_lines("Shelf-Life Prediction (years)") %>%
-                        # add_header_lines(values = c("Shelf-Life Prediction (years)"), top = TRUE) %>%
-                        bold(i = 1:2, bold = TRUE, part = "header") %>%
-                        padding(padding.top = 20, padding.bottom = 10, part="all") %>%
-                        
+                    value = flextable(modified_shelf_life_summary_flextable(), cwidth=1.2) %>%
+                        bold(i = 1, bold = TRUE, part = "header") %>%
                         bg(bg = "#FBF59E", part = "header") %>%
                         align(align="center", part="all") %>%
-                        fontsize(size = 12, part = "header") %>%
-                        fontsize(size = 16, part = "body") %>%
+                        fontsize(size = 14, part = "body") %>%
                         hline_top(part = "all", border = fp_border(color="black", width=2)),
                     location = ph_location_type(type = "body", position_right = F, position_top = F)
                 ) %>%
-                ph_with(
-                    value = flextable(summary_flextable(), cwidth=1.5) %>% 
-                        bg(bg = "#FBF59E", part = "header") %>%
-                        align(align="center", part="all") %>%
-                        fontsize(size = 12, part = "header") %>%
-                        fontsize(size = 16, part = "body"),
-                    location = ph_location_type(type = "body", position_right = F, index=9)
-                ) %>%
+                # ph_with(
+                #     value = flextable(summary_flextable(), cwidth=1.5) %>% 
+                #         bg(bg = "#FBF59E", part = "header") %>%
+                #         align(align="center", part="all") %>%
+                #         fontsize(size = 12, part = "header") %>%
+                #         fontsize(size = 16, part = "body"),
+                #     location = ph_location_type(type = "body", position_right = F, index=9)
+                # ) %>%
                 ph_with(
                     value = notes_reactive(),
-                    location = ph_location_template(left=9, top=4, width=4, newlabel="new", id=6)
+                    location = ph_location_template(left=8, top=6, width=5, newlabel="new", id=6)
                 ) %>%
-                ################### REGRESSION SUMMARY SLIDE - UPDATED ##################
-                add_slide(layout = "Content with Caption", master = "Office Theme") %>%
+                # ################### REGRESSION SUMMARY SLIDE - UPDATED ##################
+                # add_slide(layout = "Content with Caption", master = "Office Theme") %>%
+                # ph_with(
+                #     value = "P1: Regression Summary", 
+                #     location = ph_location_type(type = "title")
+                # ) %>%
+                # ph_with(
+                #     value = residual_vs_fit_plot(keep(), poly_order()),
+                #     location = ph_location_type(type = "body", position_right = T)
+                # ) %>%
+                # ph_with(
+                #     value = flextable(summary_flextable(), cwidth=1.5) %>% 
+                #         bg(bg = "#FBF59E", part = "header") %>%
+                #         align(align="center", part="all") %>%
+                #         fontsize(size = 12, part = "header") %>%
+                #         fontsize(size = 16, part = "body"),
+                #     location = ph_location_type(type = "body", position_right = F)   
+                # ) %>%
+                ################## RESIDUAL VS FIT AND HISTOGRAM - MODIFIED ##################
+            add_slide(layout = "Two Content", master = "Office Theme") %>%
                 ph_with(
-                    value = "P1: Regression Summary", 
+                    value = "Residuals", 
                     location = ph_location_type(type = "title")
                 ) %>%
                 ph_with(
-                    value = residual_vs_fit_plot(keep(), poly_order()),
-                    location = ph_location_type(type = "body", position_right = T)
+                    value = residual_vs_fit_plot(keep(), poly_order()), 
+                    location = ph_location_type(type = "body", index = 4, position_right = F)
                 ) %>%
                 ph_with(
-                    value = flextable(summary_flextable(), cwidth=1.5) %>% 
+                    value = residual_histogram(keep(), poly_order()), 
+                    location = ph_location_type(type = "body", index = 3, position_right = T)
+                ) %>%
+                ################## NORMALITY OF RESIDUALS - RAW ##################
+            add_slide(layout = "Two Content", master = "Office Theme") %>%
+                ph_with(
+                    value = "Normality of Residuals", 
+                    location = ph_location_type(type = "title")
+                ) %>%
+                ph_with(
+                    value = normal_probability_plot(keep(), poly_order(), find_residuals(keep(), poly_order())), 
+                    location = ph_location_type(type = "body", index = 4, position_right = F)
+                ) %>%
+                # ph_with(
+                #     value = anderson_darling_flextable(), 
+                #     location = ph_location_type(type = "body", index = 3, position_right = T)
+                # ) %>%
+                ph_with(
+                    value = flextable(modified_anderson_darling_flextable(), cwidth=3) %>% 
                         bg(bg = "#FBF59E", part = "header") %>%
                         align(align="center", part="all") %>%
                         fontsize(size = 12, part = "header") %>%
                         fontsize(size = 16, part = "body"),
-                    location = ph_location_type(type = "body", position_right = F)   
+                    location = ph_location_type(type = "body", left = 7, index = 3, position_right = T)
                 ) %>%
                 ################### HISTOGRAM PLOTS SLIDE ##################
                 add_slide(layout = "Title and Content", master = "Office Theme") %>%

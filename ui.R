@@ -11,6 +11,7 @@ library(flextable)
 
 source('global.R')
 example_file <- read.csv('stability_stats.csv')
+# source('omiq_regression.R')
 
 ui = tagList(
     # shinythemes::themeSelector(),

@@ -375,354 +375,354 @@ anderson_darling_normality_test <- function(residuals){
     return(p_value)
 }
 
-######################################################
-## 
-stats_file <- read_csv("all_stats.csv")
-
-## Step 1: Upload raw stats ##
-df <- read_stats("all_stats.csv", "Lymph")
-
-## Step 2: Calculate % of 4C Reference MFI ##
-df <- calculate_perct_4C_MFI(df)
-
-## Step 3a: Transform % of 4C Reference MFI data to wide ##
-df <- create_raw_reference_MFI_table_wide(df)
-
-## Step 3b: Transform % of 4C Reference MFI data to long ##
-df_melt <- meltedDataTable(df)
-
-## Step 4: Create linear regression model ##
-fit_summary <- best_fit_equation(df_melt, ORDER)
-
-## Step 5: Add lower 95% Confidence Intervals ##
-bands <- find_confidence_bands(df_melt, ORDER, CI, THRESHOLD_MFI)
-
-## Step 6: Calculate predicted shelf-life ##
-lower_shelf_life <- solve_for_lower_shelf_life(df_melt, ORDER, CI, THRESHOLD_MFI)
-shelf_life <- solve_for_shelf_life(df_melt, THRESHOLD_MFI, ORDER)
-print(lower_shelf_life)
-## Step 7: Calculate model p-value ##
-p_value <- polynomial_evaluation_of_linearity(df_melt, ORDER)
-
-## Step 8: Calculated R^2 value ##
-r_sq <- R_sq(df_melt, ORDER)
-
-# Step 9: Create plot of regression model ##
-regress_plot <- plot_regression(df_melt, ORDER, CI, bands)
-
-residuals <- find_residuals(df_melt, ORDER)
-## Step 10: Create residual vs fit plot ##
-resid_plot <- residual_vs_fit_plot(df_melt, ORDER, residuals)
-
-## Step 11: Create normal probability plot of residuals ##
-normal_prob_plot <- normal_probability_plot(df_melt, ORDER, residuals)
-
-## Step 12: Create histogram of residuals ##
-resid_histogram <- residual_histogram(df_melt, ORDER, residuals)
-
-normality_p_value <- anderson_darling_normality_test(residuals)
-
-## Step 12: Create report ##
-regression_report <- function(){
-    
-}
-
-shelf_life_df <- tibble(
-    "Shelf-Life (days)" = round(lower_shelf_life*365,0),
-    "Shelf-Life (years)" = round(lower_shelf_life,2),
-    "R-squared" = round(r_sq, 2),
-    "Model p-value" = format(round(p_value$b_pvalue, 3), nsmall = 3)
-)
-
-perc_4C_mfi_table_png <- function(){
-    tab = ggpubr::ggtexttable(df, rows = NULL,
-                              theme=ggpubr::ttheme("classic",
-                                                   base_size=28,
-                                                   padding = unit(c(16, 5), "mm"),
-                                                   colnames.style = ggpubr::colnames_style(fill = "lightgray",
-                                                                                           size = 28,
-                                                                                           linecolor = "black")))
-    tab = ggpubr::tab_add_title(tab,text = "% of 0 Reference MFI", face = "bold", size = 28, hjust = -2)
-    
-    
-    for (r in 3:(NROW(df)+2)){ # add bold first column and gray bg
-        tab = ggpubr::table_cell_font(tab, row=r, column=1, face="bold", size=28)
-        tab = ggpubr::table_cell_bg(tab, row=r, column=1, fill="lightgray")
-    }
-    
-    png("StatsTable.png", width=1600, height=800, units="px")
-    print(tab)
-}
-
-shelf_life_estimates_table_png <- function(p_value, shelf_life){
-    
-    shelf_life_df_tab = ggpubr::ggtexttable(shelf_life_df, rows = NULL,
-                              theme=ggpubr::ttheme("classic",
-                                                   base_size=28,
-                                                   padding = unit(c(16, 5), "mm"),
-                                                   colnames.style = ggpubr::colnames_style(fill = "lightgray",
-                                                                                           size = 28,
-                                                                                           linecolor = "black")))
-    shelf_life_df_tab = ggpubr::tab_add_title(shelf_life_df_tab,text = "Shelf-Life Estimates", face = "bold", size = 28, hjust = -1.2)
-    
-    if(p_value < 0.05){
-        shelf_life_df_tab <- table_cell_bg(
-            shelf_life_df_tab,
-            row = 3,
-            column = 4,
-            linewidth = 5,
-            fill = "#f69494",
-            color = "#ee0000"
-        )
-    }
-    if(shelf_life < 0){
-        shelf_life_df_tab <- table_cell_bg(
-            shelf_life_df_tab,
-            row = 3,
-            column = c(1:2),
-            linewidth = 5,
-            fill = "#f69494",
-            color = "#ee0000"
-        )
-    }
-    if(unique(stats_file$Fluorochrome) == "Ab-E" & shelf_life < 1){
-        shelf_life_df_tab <- table_cell_bg(
-            shelf_life_df_tab,
-            row = 3,
-            column = c(1:2),
-            linewidth = 5,
-            fill = "#f69494",
-            color = "#ee0000"
-        )
-    }
-    else if(unique(stats_file$Fluorochrome) == "Purified" & shelf_life < 2){
-        shelf_life_df_tab <- table_cell_bg(
-            shelf_life_df_tab,
-            row = 3,
-            column = c(1:2),
-            linewidth = 5,
-            fill = "#f69494",
-            color = "#ee0000"
-        )
-    }
-    else if(shelf_life < 1.5){
-        shelf_life_df_tab <- table_cell_bg(
-            shelf_life_df_tab,
-            row = 3,
-            column = c(1:2),
-            linewidth = 5,
-            fill = "#f69494",
-            color = "#ee0000"
-        )
-    }
-    if(r_sq < 0.80){
-        shelf_life_df_tab <- table_cell_bg(
-            shelf_life_df_tab,
-            row = 3,
-            column = 3,
-            linewidth = 5,
-            fill = "#ffec8b",
-            color = "#ffd700"
-        )
-    }
-    
-    png("ShelfLifeEstimates.png", width=1200, height=800, units="px")
-    print(shelf_life_df_tab)
-}
-
-anderson_darling_p_value_png <- function(p_value){
-    
-    ad_p_value_df = ggpubr::ggtexttable(tibble("Anderson-Darling\nNormality Test p-value" = round(normality_p_value, 3)), rows = NULL,
-                                            theme=ggpubr::ttheme("classic",
-                                                                 base_size=28,
-                                                                 padding = unit(c(16, 5), "mm"),
-                                                                 colnames.style = ggpubr::colnames_style(fill = "lightgray",
-                                                                                                         size = 28,
-                                                                                                         linecolor = "black")))
-    # ad_p_value_df = ggpubr::tab_add_title(ad_p_value_df,text = "Anderson-Darling Normality Test", face = "bold", size = 28)
-    
-    if(p_value >= 0.05){
-        ad_p_value_df <- table_cell_bg(
-            ad_p_value_df,
-            row = 2,
-            column = 1,
-            linewidth = 5,
-            fill = "#f69494",
-            color = "#ee0000"
-        )
-    }
-    
-    png("anderson_darling_p_value.png", width=1200, height=800, units="px")
-    print(ad_p_value_df)
-}
-
-regression_pdf <- function(){
-    
-    # Create regression plot png
-    png("regression_plot.png", width = 1200, height = 800, units = "px")
-    print(regress_plot)
-    dev.off()
-    
-    # Create % of 4C Reference MFI Table png
-    perc_4C_mfi_table_png()
-    dev.off()
-
-    # Create shelf-life estimates png
-    shelf_life_estimates_table_png(p_value$b_pvalue, lower_shelf_life)
-    dev.off()
-    
-    
-    
-    png_plots = list()
-    for (i in c("regression_plot.png","StatsTable.png", "ShelfLifeEstimates.png")) {
-        # pname = pnames[i]
-        png_plots[[i]] = grid::rasterGrob(png::readPNG(i))
-    }
-    # figure = ggpubr::ggarrange(
-    #     plotlist=png_plots,
-    #     ncol=2, nrow=2
-    # )
-    figure = ggarrange(
-        png_plots[[1]], ggarrange(png_plots[[2]], png_plots[[3]], ncol = 2),
-        nrow = 2
-    )
-    
-    return(figure)
-}
-quality_checks_pdf <- function(){
-    
-    # Create residuals vs fit plot png
-    png("residuals_vs_fit_plot.png", width = 1200, height = 800, units = "px")
-    print(resid_plot)
-    dev.off()
-    
-    # Create histogram of residuals png
-    png("residual_histogram.png", width = 1200, height = 800, units = "px")
-    print(resid_histogram)
-    dev.off()
-    
-    # Create normal probability plot of residuals png
-    png("normal_prob_plot_of_residuals.png", width = 1200, height = 800, units = "px")
-    print(normal_prob_plot)
-    dev.off()
-
-    # Generate p-value for Anderson-Darling Normality Test 
-    # png("anderson_darling_p_value.png", width = 1200, height = 800, units = "px")
-    # print(normality_p_value)
-    anderson_darling_p_value_png(normality_p_value)
-    dev.off()
-    
-    # Loop through each png and print to pdf
-    png_plots = list()
-    for (i in c("residuals_vs_fit_plot.png", "residual_histogram.png", "normal_prob_plot_of_residuals.png", "anderson_darling_p_value.png")) {
-        # pname = pnames[i]
-        png_plots[[i]] = grid::rasterGrob(png::readPNG(i))
-    }
-    figure = ggpubr::ggarrange(
-        plotlist=png_plots,
-        ncol=2, nrow=2
-    )
-    # figure = ggarrange(
-    #     png_plots[[1]], ggarrange(png_plots[[2]], stable.p, ncol = 2),
-    #     nrow = 2
-    # )
-    
-    return(figure)
-}
-
-pdf("example_regression_report.pdf", title="Regression for Stability", width = 16, height = 10, onefile = TRUE)
-print(regression_pdf())
-print(quality_checks_pdf())
-
-dev.off()
-
-
-########################################################################
-library(rstatix)
-library(tidyverse)
-library(RColorBrewer)
-library(ggpubr)
-df_mass <- create_raw_reference_MFI_table_wide(readxl::read_xlsx("hIL-4 MP4-25D2 R718 - mass size.xlsx"))
-df_full <- create_raw_reference_MFI_table_wide(readxl::read_xlsx("hIL-4 MP4-25D2 R718 - 1'5y_full_titr.xlsx"))
-df_short <- create_raw_reference_MFI_table_wide(readxl::read_xlsx("hIL-4 MP4-25D2 R718 - 1'5y_short_titr.xlsx"))
-df_test <- create_raw_reference_MFI_table_wide(readxl::read_xlsx("hIL-4 MP4-25D2 R718 - test size.xlsx"))
-df_melt_mass <- meltedDataTable(df_mass) %>% add_column("Dataset"="Mass Size")
-df_melt_full <- meltedDataTable(df_full) %>% add_column("Dataset"="1.5y + 5y full titration")
-df_melt_short <- meltedDataTable(df_short) %>% add_column("Dataset"="1.5y + 5y short titration")
-df_melt_test <- meltedDataTable(df_test) %>% add_column("Dataset"="Test Size")
-
-df_test_mass <- as_tibble(rbind(df_melt_mass, df_melt_test)) %>% convert_as_factor(Dataset)
-df_all <- as_tibble(rbind(df_melt_mass, df_melt_test, df_melt_full, df_melt_short)) %>% convert_as_factor(Dataset)
-df_test_short <- as_tibble(rbind(df_melt_short, df_melt_test)) %>% convert_as_factor(Dataset)
-df_test_full <- as_tibble(rbind(df_melt_full, df_melt_test)) %>% convert_as_factor(Dataset)
-
-df_all[df_all$Time == 0.5 & df_all$Dataset == "1.5y + 5y full titration",]
-# av_test_short <- aov(value ~ Dataset, data=df_test_short)
-# av_test_full <- aov(value ~ Dataset, data=df_test_full)
-
-# summary(av_test_short)
-# summary(av_test_full)
-
-# df_test_short %>%
+# ######################################################
+# ## 
+# stats_file <- read_csv("all_stats.csv")
+# 
+# ## Step 1: Upload raw stats ##
+# df <- read_stats("all_stats.csv", "Lymph")
+# 
+# ## Step 2: Calculate % of 4C Reference MFI ##
+# df <- calculate_perct_4C_MFI(df)
+# 
+# ## Step 3a: Transform % of 4C Reference MFI data to wide ##
+# df <- create_raw_reference_MFI_table_wide(df)
+# 
+# ## Step 3b: Transform % of 4C Reference MFI data to long ##
+# df_melt <- meltedDataTable(df)
+# 
+# ## Step 4: Create linear regression model ##
+# fit_summary <- best_fit_equation(df_melt, ORDER)
+# 
+# ## Step 5: Add lower 95% Confidence Intervals ##
+# bands <- find_confidence_bands(df_melt, ORDER, CI, THRESHOLD_MFI)
+# 
+# ## Step 6: Calculate predicted shelf-life ##
+# lower_shelf_life <- solve_for_lower_shelf_life(df_melt, ORDER, CI, THRESHOLD_MFI)
+# shelf_life <- solve_for_shelf_life(df_melt, THRESHOLD_MFI, ORDER)
+# print(lower_shelf_life)
+# ## Step 7: Calculate model p-value ##
+# p_value <- polynomial_evaluation_of_linearity(df_melt, ORDER)
+# 
+# ## Step 8: Calculated R^2 value ##
+# r_sq <- R_sq(df_melt, ORDER)
+# 
+# # Step 9: Create plot of regression model ##
+# regress_plot <- plot_regression(df_melt, ORDER, CI, bands)
+# 
+# residuals <- find_residuals(df_melt, ORDER)
+# ## Step 10: Create residual vs fit plot ##
+# resid_plot <- residual_vs_fit_plot(df_melt, ORDER, residuals)
+# 
+# ## Step 11: Create normal probability plot of residuals ##
+# normal_prob_plot <- normal_probability_plot(df_melt, ORDER, residuals)
+# 
+# ## Step 12: Create histogram of residuals ##
+# resid_histogram <- residual_histogram(df_melt, ORDER, residuals)
+# 
+# normality_p_value <- anderson_darling_normality_test(residuals)
+# 
+# ## Step 12: Create report ##
+# regression_report <- function(){
+#     
+# }
+# 
+# shelf_life_df <- tibble(
+#     "Shelf-Life (days)" = round(lower_shelf_life*365,0),
+#     "Shelf-Life (years)" = round(lower_shelf_life,2),
+#     "R-squared" = round(r_sq, 2),
+#     "Model p-value" = format(round(p_value$b_pvalue, 3), nsmall = 3)
+# )
+# 
+# perc_4C_mfi_table_png <- function(){
+#     tab = ggpubr::ggtexttable(df, rows = NULL,
+#                               theme=ggpubr::ttheme("classic",
+#                                                    base_size=28,
+#                                                    padding = unit(c(16, 5), "mm"),
+#                                                    colnames.style = ggpubr::colnames_style(fill = "lightgray",
+#                                                                                            size = 28,
+#                                                                                            linecolor = "black")))
+#     tab = ggpubr::tab_add_title(tab,text = "% of 0 Reference MFI", face = "bold", size = 28, hjust = -2)
+#     
+#     
+#     for (r in 3:(NROW(df)+2)){ # add bold first column and gray bg
+#         tab = ggpubr::table_cell_font(tab, row=r, column=1, face="bold", size=28)
+#         tab = ggpubr::table_cell_bg(tab, row=r, column=1, fill="lightgray")
+#     }
+#     
+#     png("StatsTable.png", width=1600, height=800, units="px")
+#     print(tab)
+# }
+# 
+# shelf_life_estimates_table_png <- function(p_value, shelf_life){
+#     
+#     shelf_life_df_tab = ggpubr::ggtexttable(shelf_life_df, rows = NULL,
+#                               theme=ggpubr::ttheme("classic",
+#                                                    base_size=28,
+#                                                    padding = unit(c(16, 5), "mm"),
+#                                                    colnames.style = ggpubr::colnames_style(fill = "lightgray",
+#                                                                                            size = 28,
+#                                                                                            linecolor = "black")))
+#     shelf_life_df_tab = ggpubr::tab_add_title(shelf_life_df_tab,text = "Shelf-Life Estimates", face = "bold", size = 28, hjust = -1.2)
+#     
+#     if(p_value < 0.05){
+#         shelf_life_df_tab <- table_cell_bg(
+#             shelf_life_df_tab,
+#             row = 3,
+#             column = 4,
+#             linewidth = 5,
+#             fill = "#f69494",
+#             color = "#ee0000"
+#         )
+#     }
+#     if(shelf_life < 0){
+#         shelf_life_df_tab <- table_cell_bg(
+#             shelf_life_df_tab,
+#             row = 3,
+#             column = c(1:2),
+#             linewidth = 5,
+#             fill = "#f69494",
+#             color = "#ee0000"
+#         )
+#     }
+#     if(unique(stats_file$Fluorochrome) == "Ab-E" & shelf_life < 1){
+#         shelf_life_df_tab <- table_cell_bg(
+#             shelf_life_df_tab,
+#             row = 3,
+#             column = c(1:2),
+#             linewidth = 5,
+#             fill = "#f69494",
+#             color = "#ee0000"
+#         )
+#     }
+#     else if(unique(stats_file$Fluorochrome) == "Purified" & shelf_life < 2){
+#         shelf_life_df_tab <- table_cell_bg(
+#             shelf_life_df_tab,
+#             row = 3,
+#             column = c(1:2),
+#             linewidth = 5,
+#             fill = "#f69494",
+#             color = "#ee0000"
+#         )
+#     }
+#     else if(shelf_life < 1.5){
+#         shelf_life_df_tab <- table_cell_bg(
+#             shelf_life_df_tab,
+#             row = 3,
+#             column = c(1:2),
+#             linewidth = 5,
+#             fill = "#f69494",
+#             color = "#ee0000"
+#         )
+#     }
+#     if(r_sq < 0.80){
+#         shelf_life_df_tab <- table_cell_bg(
+#             shelf_life_df_tab,
+#             row = 3,
+#             column = 3,
+#             linewidth = 5,
+#             fill = "#ffec8b",
+#             color = "#ffd700"
+#         )
+#     }
+#     
+#     png("ShelfLifeEstimates.png", width=1200, height=800, units="px")
+#     print(shelf_life_df_tab)
+# }
+# 
+# anderson_darling_p_value_png <- function(p_value){
+#     
+#     ad_p_value_df = ggpubr::ggtexttable(tibble("Anderson-Darling\nNormality Test p-value" = round(normality_p_value, 3)), rows = NULL,
+#                                             theme=ggpubr::ttheme("classic",
+#                                                                  base_size=28,
+#                                                                  padding = unit(c(16, 5), "mm"),
+#                                                                  colnames.style = ggpubr::colnames_style(fill = "lightgray",
+#                                                                                                          size = 28,
+#                                                                                                          linecolor = "black")))
+#     # ad_p_value_df = ggpubr::tab_add_title(ad_p_value_df,text = "Anderson-Darling Normality Test", face = "bold", size = 28)
+#     
+#     if(p_value >= 0.05){
+#         ad_p_value_df <- table_cell_bg(
+#             ad_p_value_df,
+#             row = 2,
+#             column = 1,
+#             linewidth = 5,
+#             fill = "#f69494",
+#             color = "#ee0000"
+#         )
+#     }
+#     
+#     png("anderson_darling_p_value.png", width=1200, height=800, units="px")
+#     print(ad_p_value_df)
+# }
+# 
+# regression_pdf <- function(){
+#     
+#     # Create regression plot png
+#     png("regression_plot.png", width = 1200, height = 800, units = "px")
+#     print(regress_plot)
+#     dev.off()
+#     
+#     # Create % of 4C Reference MFI Table png
+#     perc_4C_mfi_table_png()
+#     dev.off()
+# 
+#     # Create shelf-life estimates png
+#     shelf_life_estimates_table_png(p_value$b_pvalue, lower_shelf_life)
+#     dev.off()
+#     
+#     
+#     
+#     png_plots = list()
+#     for (i in c("regression_plot.png","StatsTable.png", "ShelfLifeEstimates.png")) {
+#         # pname = pnames[i]
+#         png_plots[[i]] = grid::rasterGrob(png::readPNG(i))
+#     }
+#     # figure = ggpubr::ggarrange(
+#     #     plotlist=png_plots,
+#     #     ncol=2, nrow=2
+#     # )
+#     figure = ggarrange(
+#         png_plots[[1]], ggarrange(png_plots[[2]], png_plots[[3]], ncol = 2),
+#         nrow = 2
+#     )
+#     
+#     return(figure)
+# }
+# quality_checks_pdf <- function(){
+#     
+#     # Create residuals vs fit plot png
+#     png("residuals_vs_fit_plot.png", width = 1200, height = 800, units = "px")
+#     print(resid_plot)
+#     dev.off()
+#     
+#     # Create histogram of residuals png
+#     png("residual_histogram.png", width = 1200, height = 800, units = "px")
+#     print(resid_histogram)
+#     dev.off()
+#     
+#     # Create normal probability plot of residuals png
+#     png("normal_prob_plot_of_residuals.png", width = 1200, height = 800, units = "px")
+#     print(normal_prob_plot)
+#     dev.off()
+# 
+#     # Generate p-value for Anderson-Darling Normality Test 
+#     # png("anderson_darling_p_value.png", width = 1200, height = 800, units = "px")
+#     # print(normality_p_value)
+#     anderson_darling_p_value_png(normality_p_value)
+#     dev.off()
+#     
+#     # Loop through each png and print to pdf
+#     png_plots = list()
+#     for (i in c("residuals_vs_fit_plot.png", "residual_histogram.png", "normal_prob_plot_of_residuals.png", "anderson_darling_p_value.png")) {
+#         # pname = pnames[i]
+#         png_plots[[i]] = grid::rasterGrob(png::readPNG(i))
+#     }
+#     figure = ggpubr::ggarrange(
+#         plotlist=png_plots,
+#         ncol=2, nrow=2
+#     )
+#     # figure = ggarrange(
+#     #     png_plots[[1]], ggarrange(png_plots[[2]], stable.p, ncol = 2),
+#     #     nrow = 2
+#     # )
+#     
+#     return(figure)
+# }
+# 
+# pdf("example_regression_report.pdf", title="Regression for Stability", width = 16, height = 10, onefile = TRUE)
+# print(regression_pdf())
+# print(quality_checks_pdf())
+# 
+# dev.off()
+# 
+# 
+# ########################################################################
+# library(rstatix)
+# library(tidyverse)
+# library(RColorBrewer)
+# library(ggpubr)
+# df_mass <- create_raw_reference_MFI_table_wide(readxl::read_xlsx("hIL-4 MP4-25D2 R718 - mass size.xlsx"))
+# df_full <- create_raw_reference_MFI_table_wide(readxl::read_xlsx("hIL-4 MP4-25D2 R718 - 1'5y_full_titr.xlsx"))
+# df_short <- create_raw_reference_MFI_table_wide(readxl::read_xlsx("hIL-4 MP4-25D2 R718 - 1'5y_short_titr.xlsx"))
+# df_test <- create_raw_reference_MFI_table_wide(readxl::read_xlsx("hIL-4 MP4-25D2 R718 - test size.xlsx"))
+# df_melt_mass <- meltedDataTable(df_mass) %>% add_column("Dataset"="Mass Size")
+# df_melt_full <- meltedDataTable(df_full) %>% add_column("Dataset"="1.5y + 5y full titration")
+# df_melt_short <- meltedDataTable(df_short) %>% add_column("Dataset"="1.5y + 5y short titration")
+# df_melt_test <- meltedDataTable(df_test) %>% add_column("Dataset"="Test Size")
+# 
+# df_test_mass <- as_tibble(rbind(df_melt_mass, df_melt_test)) %>% convert_as_factor(Dataset)
+# df_all <- as_tibble(rbind(df_melt_mass, df_melt_test, df_melt_full, df_melt_short)) %>% convert_as_factor(Dataset)
+# df_test_short <- as_tibble(rbind(df_melt_short, df_melt_test)) %>% convert_as_factor(Dataset)
+# df_test_full <- as_tibble(rbind(df_melt_full, df_melt_test)) %>% convert_as_factor(Dataset)
+# 
+# df_all[df_all$Time == 0.5 & df_all$Dataset == "1.5y + 5y full titration",]
+# # av_test_short <- aov(value ~ Dataset, data=df_test_short)
+# # av_test_full <- aov(value ~ Dataset, data=df_test_full)
+# 
+# # summary(av_test_short)
+# # summary(av_test_full)
+# 
+# # df_test_short %>%
+# #     group_by(Dataset, Time) %>%
+# #     get_summary_stats(value, type = "mean_sd")
+# 
+# bxp <- ggboxplot(
+#     df_all, x = "Time", y = "value",
+#     color = "Dataset", palette = "jco",
+#     xlab = "Time (years)", ylab = "% of 4C Reference MFI"
+#     # facet.by = "diet", short.panel.labs = FALSE
+# )
+# bxp
+# df_all %>% group_by(Time) %>% identify_outliers(value)
+# 
+# sapply(df_all, function(i) is.na(df_all))
+# dim(df_all)
+# ggline(df_all, x = "Dataset", y = "value", 
+#        add = c("mean_se", "jitter"), 
+#        color = "Dataset", palette = "jco",
+#        # order = c("ctrl", "trt1", "trt2"),
+#        ylab = "Weight", xlab = "Treatment")
+# # Compute the analysis of variance
+# res.aov <- aov(value ~ Dataset, data = df_all)
+# # Summary of the analysis
+# summary(res.aov)
+# TukeyHSD(res.aov)
+# 
+# res.aov <- anova_test(
+#     data = df_test_short, dv = value, wid = Concentrations,
+#     within = c(Dataset, Time)
+# )
+# df_all[20:30,]
+# 
+# get_anova_table(res.aov)
+# 
+# df_test_short
+# na.omit(df_melt_short) %>%
 #     group_by(Dataset, Time) %>%
-#     get_summary_stats(value, type = "mean_sd")
-
-bxp <- ggboxplot(
-    df_all, x = "Time", y = "value",
-    color = "Dataset", palette = "jco",
-    xlab = "Time (years)", ylab = "% of 4C Reference MFI"
-    # facet.by = "diet", short.panel.labs = FALSE
-)
-bxp
-df_all %>% group_by(Time) %>% identify_outliers(value)
-
-sapply(df_all, function(i) is.na(df_all))
-dim(df_all)
-ggline(df_all, x = "Dataset", y = "value", 
-       add = c("mean_se", "jitter"), 
-       color = "Dataset", palette = "jco",
-       # order = c("ctrl", "trt1", "trt2"),
-       ylab = "Weight", xlab = "Treatment")
-# Compute the analysis of variance
-res.aov <- aov(value ~ Dataset, data = df_all)
-# Summary of the analysis
-summary(res.aov)
-TukeyHSD(res.aov)
-
-res.aov <- anova_test(
-    data = df_test_short, dv = value, wid = Concentrations,
-    within = c(Dataset, Time)
-)
-df_all[20:30,]
-
-get_anova_table(res.aov)
-
-df_test_short
-na.omit(df_melt_short) %>%
-    group_by(Dataset, Time) %>%
-    identify_outliers(value) %>%
-    # shapiro_test(value)
-identify_outliers(df_all, variable = "value")
-
-df_all %>%
-    group_by(Dataset) %>%
-    identify_outliers(Time)
-
-df_melt_mass
-res.aov <- anova_test(
-    data = df_test_short, dv = value, wid = Dataset,
-    within = c(Dataset, Time)
-)
-get_anova_table(res.aov)
-
-## Step 1: Test for normal distribution ##
-normal_distribution_test <- function(){
-    set.seed(100)
-    sample_n(df_melt_mass, nrow(df_mass))
-    
-    ggqqplot(df_melt_full$value)
-    shapiro.test(df_melt_full$value)
-}
-## Step 2: Test that datasets have a common variance ##
+#     identify_outliers(value) %>%
+#     # shapiro_test(value)
+# identify_outliers(df_all, variable = "value")
+# 
+# df_all %>%
+#     group_by(Dataset) %>%
+#     identify_outliers(Time)
+# 
+# df_melt_mass
+# res.aov <- anova_test(
+#     data = df_test_short, dv = value, wid = Dataset,
+#     within = c(Dataset, Time)
+# )
+# get_anova_table(res.aov)
+# 
+# ## Step 1: Test for normal distribution ##
+# normal_distribution_test <- function(){
+#     set.seed(100)
+#     sample_n(df_melt_mass, nrow(df_mass))
+#     
+#     ggqqplot(df_melt_full$value)
+#     shapiro.test(df_melt_full$value)
+# }
+# ## Step 2: Test that datasets have a common variance ##
 
 
