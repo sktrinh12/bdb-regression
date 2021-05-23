@@ -327,8 +327,8 @@ residual_vs_fit_plot <- function(df_melt, order, residuals){
         theme(text=element_text(size = FONT_SIZE))
     
     p2 <- ggplot(mapping = aes(sample = residuals)) + 
-        stat_qq_point(size = 2,color = "red") + 
-        stat_qq_line(color="black") +
+        qqplotr::stat_qq_point(size = 2,color = "red") + 
+        qqplotr::stat_qq_line(color="black") +
         xlab("x-axis") + ylab("y-axis")
     show(p2)
     
@@ -341,8 +341,8 @@ normal_probability_plot <- function(df_melt, order, residuals){
     
     # And adding line with proper properties
     p <- ggplot(mapping = aes(sample = residuals)) + 
-        stat_qq_point(size = DATA_PT_SIZE,color = "#eb6864") + 
-        stat_qq_line(color="black") +
+        qqplotr::stat_qq_point(size = DATA_PT_SIZE,color = "#eb6864") + 
+        qqplotr::stat_qq_line(color="black") +
         xlab("Theoretical Quantiles") + ylab("Residuals") +
         theme(text=element_text(size = FONT_SIZE))
     print(p)
