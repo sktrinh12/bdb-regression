@@ -21,54 +21,63 @@ template_data <- tibble('Time'=c(0,0.5,1,1.5,2,3,4,5),
                             'Conc_2000_ng'=rep(NA, 8)
 )
 
-
+## Calculate the % of 4C Reference MFI data from the uploaded stats
 calculate_perct_4C_MFI <- function(df){
     
-    # df <- read_xlsx(df)
-    print(df)
     calc_vect <- c() # Initialize % of 4C MFI data
     for(i in unique(df$Concentration)){
         for(row in c(1:nrow(df[df$Concentration == i,]))){
             ref_for_each_conc <- df$`MFI+`[df$Concentration == i & df$Condition == 0]
             MFI <- df$`MFI+`[df$Concentration == i][[row]]
-            print(MFI)
             calc <- round((as.numeric(MFI)/as.numeric(ref_for_each_conc))*100,0)
             calc_vect <- append(calc_vect, calc)
         }
         
     }
     df <- bind_cols(df, "% 4C Reference MFI"=calc_vect)
-    df2 <- df %>% pivot_wider(names_from = Concentration, values_from = `MFI+`)
     return(df)
 }
-# df<- calculate_perct_4C_MFI("20210226-RB-FY21w5p1 HuNHP CD3 (SP34-2) R718 - RAW.xlsx")
 
-create_reference_MFI_table_wide <- function(df){
-    df_selected <- select(df, c(Condition, Concentration, `% 4C Reference MFI`))
-    print(df_selected)
+## FOR UI USE ONLY
+## Convert the reference MFI table to a wide table, each column designated to each concentration
+## If 15 ng/test isn't included, will add to the table, but automatically toggle off of UI. 
+create_reference_MFI_table_wide_UI_only <- function(df){
     
-    df2 <- df_selected %>% pivot_wider(names_from = Concentration, values_from = `% 4C Reference MFI`)
-    colnames(df2)[1] <- "Time"
-    for(i in c(2:length(colnames(df2)))){
-        # colnames(df2)[i] <- paste0("Conc_", colnames(df2)[i], "_ng")
-        colnames(df2)[i] <- paste0(colnames(df2)[i], " ng/test")
+    # Take only subset of raw stats table
+    df_selected <- select(df, c(Condition, Concentration, `% 4C Reference MFI`))
+
+    df_wide <- df_selected %>% pivot_wider(names_from = Concentration, values_from = `% 4C Reference MFI`)
+    colnames(df_wide)[1] <- "Time"
+    for(i in c(2:length(colnames(df_wide)))){
+        colnames(df_wide)[i] <- paste0(colnames(df_wide)[i], " ng/test")
     }
 
-    # if("Conc_15_ng" %in% colnames(df2)){
-    if("15 ng/test" %in% colnames(df2)){
-        return(df2)
+    if("15 ng/test" %in% colnames(df_wide)){
+        return(df_wide)
     }
     else{
-        df2 <- add_column(df2, "15 ng/test" = c(NA), .after="Time")
+        df_wide <- add_column(df_wide, "15 ng/test" = c(NA), .after="Time")
     }
-    return(df2)
+    return(df_wide)
 }
-# create_reference_MFI_table_wide(df)
 
 create_raw_reference_MFI_table_wide <- function(df){
-    df_selected <- select(df, c(Condition, Concentration, `% 4C Reference MFI`))
-    print(df_selected)
     
+    # Take only subset of raw stats table
+    df_selected <- select(df, c(Condition, Concentration, `% 4C Reference MFI`))
+
+    df_wide <- df_selected %>% pivot_wider(names_from = Concentration, values_from = `% 4C Reference MFI`)
+    colnames(df_wide)[1] <- "Time"
+    for(i in c(2:length(colnames(df_wide)))){
+        colnames(df_wide)[i] <- paste0(colnames(df_wide)[i], " ng/test")
+    }
+
+    return(df_wide)
+}
+
+create_modified_reference_MFI_table_wide <- function(df){
+    df_selected <- select(df, c(Condition, Concentration, `% 4C Reference MFI`))
+
     df2 <- df_selected %>% pivot_wider(names_from = Concentration, values_from = `% 4C Reference MFI`)
     colnames(df2)[1] <- "Time"
     for(i in c(2:length(colnames(df2)))){
@@ -86,32 +95,25 @@ create_raw_reference_MFI_table_wide <- function(df){
     return(df2)
 }
 
-conc_to_exclude <- function(df_from_GUI, cols_to_avg){
-    df_csv <- df_from_GUI
+concentrations_to_keep <- function(reference_MFI_data_wide, columns_to_include){
+    df <- reference_MFI_data_wide
     
-    keep_matrix_conc <- c()
-    list_cols <- c()
-    for (i in cols_to_avg) {
-        keep_matrix_conc <- cbind(keep_matrix_conc, df_csv[[as.numeric(i)]])
-        list_cols <- c(list_cols, as.numeric(i))
+    concentrations_to_keep <- c()
+    list_of_included_columns <- c()
+    for (i in columns_to_include) {
+        concentrations_to_keep <- cbind(concentrations_to_keep, df[[as.numeric(i)]])
+        list_of_included_columns <- c(list_of_included_columns, as.numeric(i))
     }
-    
-    if(is.null(df_csv)){
+    if(is.null(df)){
         df_selected <- c()
     }
     else{
-        df_selected <- dplyr::select(df_csv, c(list_cols))
+        df_selected <- dplyr::select(df, c(list_of_included_columns))
     }
 
-    print(df_selected)
-    print(df_csv$Time)
-    # keep_conc <- df_selected
-    keep_conc <- cbind('Time'=df_csv$Time, df_selected)
+    concentrations_to_keep_df <- cbind('Time'=df$Time, df_selected)
 
-    
-
-    print(keep_conc)
-    return (keep_conc)
+    return (concentrations_to_keep_df)
 }
 
 concentrations_around_optimal <- function(optimal){
@@ -143,7 +145,7 @@ concentrations_around_optimal <- function(optimal){
     return(conc_around_optimal)
 }
 
-meltedDataTable <- function(df_full=template_data){
+melt_reference_mfi_table <- function(df_full=template_data){
     
     # Melt Columns by Time
     dataMelt <- melt(df_full, "Time", variable='Concentrations')
@@ -154,7 +156,7 @@ meltedDataTable <- function(df_full=template_data){
     
     return (dataMelt)
 }
-# dotPlotData <- meltedDataTable(fullDataTable(df_from_GUI))
+# dotPlotData <- melt_reference_mfi_table(fullDataTable(reference_MFI_data_wide))
 
 
 regressionDataTable <- function(df_full) {
@@ -167,7 +169,7 @@ regressionDataTable <- function(df_full) {
     # Threshold % of 4C MFI value to determine shelf-life
     threshold_y = 75
     
-    # df_csv <- df_from_GUI
+    # df_csv <- reference_MFI_data_wide
     # 
     # df_full <- cbind(df_csv, "Average"=rowMeans(df_csv[2:ncol(df_csv)]))
     
@@ -436,12 +438,38 @@ residual_histogram <- function(df_melt, order){
     p <- ggplot(df_melt,aes(x=fit_residuals, label=Time)) + 
         geom_histogram(binwidth=sd(fit_residuals), boundary=0, fill = '#eb6864') +
         labs(title = 'Histogram of Residuals',
-             subtitle = "Generally, 95% of residuals should not be larger than 2x the standard deviation of the residuals.",
+             # subtitle = "Generally, 95% of residuals should not be larger than 2x the standard deviation of the residuals.",
              x = 'Residuals', 
              y = '# of Residuals')
     
     
-    return(ggplotly(p))
+    return(p)
+}
+
+find_residuals <- function(df_melt, order){
+    df_melt <- na.omit(df_melt)
+    
+    x <- na.omit(df_melt$Time)
+    y <- na.omit(df_melt$value)
+    n <- length(x)
+    fit <- lm(y ~ poly(x,order, raw=TRUE), data=df_melt)
+    fit_residuals <- resid(fit)
+    
+    return(fit_residuals)
+}
+
+normal_probability_plot <- function(df_melt, order, residuals){
+    
+    # And adding line with proper properties
+    p <- ggplot(mapping = aes(sample = residuals)) + 
+        stat_qq_point(size = 3,color = "#eb6864") + 
+        stat_qq_line(color="black") +
+        labs(title = 'Normal Probability Plot of Residuals',
+             x = 'Theoretical Quantiles', 
+             y = 'Residuals') +
+        theme(text=element_text(size = 11))
+    print(p)
+    return(p)
 }
 
 read_marker_data <- function(wave_data, sheet="Sheet1"){
@@ -452,6 +480,19 @@ read_marker_data <- function(wave_data, sheet="Sheet1"){
     # print(wave_df$`Optimal (ng/test)`[wave_df$Specificity=='Integrin'])
     wave_df <- tibble(cbind(wave_df, 'Marker Description'=marker_info))
     return(wave_df)
+}
+
+
+
+anderson_darling_normality_test <- function(residuals){
+    ad <- ad.test(residuals)
+    # print(ad)
+    # sqrt(ad$statistic^2)
+    p_value <- ad$p.value
+    
+    # null hypothesis is that data DOES follow normal distribution
+    # can reject null hypothesis if p-value < 0.05 --> meaning we can say with sufficient evidence that data does NOT follow normal distribution
+    return(p_value)
 }
 
 
@@ -661,13 +702,12 @@ loop_through_for_summary <- function(data_directory, wave_summary_file, sheet, w
     # }
     for(file in unique(files_to_analyze)){
         df <- read_csv(paste0(data_directory, "\\", paste0(file, ".csv")), col_types = cols())
-        print(file)
 
         file <- paste0(file, ".csv")
-        melted_df <- meltedDataTable(df)
+        melted_df <- melt_reference_mfi_table(df)
         wave_df <- read_marker_data(wave_summary_file, sheet)
         optimal_value <- wave_df$`Optimal (ng/test)`[paste0(wave_df$`Filename`,".csv") == file]
-        optimal_df <- meltedDataTable(conc_to_exclude(df, concentrations_around_optimal(optimal_value)))
+        optimal_df <- melt_reference_mfi_table(concentrations_to_keep(df, concentrations_around_optimal(optimal_value)))
         
         format <- wave_df$`Format`[paste0(wave_df$`Filename`,".csv") == file]
         min_shelf_life <- wave_df$`Min. Shelf-Life (days)`[paste0(wave_df$`Filename`,".csv") == file]
@@ -693,7 +733,6 @@ loop_through_for_summary <- function(data_directory, wave_summary_file, sheet, w
     }
     tib <- tib[2:nrow(tib),]
 
-    print(tib)
     V1 <- as_tibble(ifelse(sapply(tibble(rep(NA, length(tib$Filename))), function(i) tib$`75% Threshold, No CI` < tib$`Min. Shelf-Life (days)` | is.na(tib$`75% Threshold, No CI`)),0, 1))
     V2 <- as_tibble(ifelse(sapply(tibble(rep(NA, length(tib$Filename))), function(i) tib$`80% Threshold, No CI` < tib$`Min. Shelf-Life (days)` | is.na(tib$`80% Threshold, No CI`)),0, 1))
     V3 <- as_tibble(ifelse(sapply(tibble(rep(NA, length(tib$Filename))), function(i) tib$`75% Threshold, Lwr 95% CI` < tib$`Min. Shelf-Life (days)` | is.na(tib$`75% Threshold, Lwr 95% CI`)),0, 1))
