@@ -6,10 +6,11 @@ library(readr)
 library(ggpubr)
 library(readxl)
 library(hash)
-
+library(tidyr)
+library(tibble)
 # order <- 2
 
-template_data <- data.frame('Time'=c(0,0.5,1,1.5,2,3,4,5), 
+template_data <- tibble('Time'=c(0,0.5,1,1.5,2,3,4,5), 
                             'Conc_15_ng'=rep(NA, 8),
                             'Conc_30_ng'=rep(NA, 8), 
                             'Conc_60_ng'=rep(NA, 8),
@@ -17,37 +18,102 @@ template_data <- data.frame('Time'=c(0,0.5,1,1.5,2,3,4,5),
                             'Conc_250_ng'=rep(NA, 8),
                             'Conc_500_ng'=rep(NA, 8),
                             'Conc_1000_ng'=rep(NA, 8),
-                            'Conc_2000_ng'=rep(NA, 8),
-                            row.names=NULL
+                            'Conc_2000_ng'=rep(NA, 8)
 )
 
-
-conc_to_exclude <- function(df_from_GUI, cols_to_avg){
-    df_csv <- df_from_GUI
+## Calculate the % of 4C Reference MFI data from the uploaded stats
+calculate_perct_4C_MFI <- function(df){
     
-    keep_matrix_conc <- c()
-    list_cols <- c()
-    for (i in cols_to_avg) {
-        keep_matrix_conc <- cbind(keep_matrix_conc, df_csv[[as.numeric(i)]])
-        list_cols <- c(list_cols, as.numeric(i))
+    calc_vect <- c() # Initialize % of 4C MFI data
+    for(i in unique(df$Concentration)){
+        for(row in c(1:nrow(df[df$Concentration == i,]))){
+            ref_for_each_conc <- df$`MFI+`[df$Concentration == i & df$Condition == 0]
+            MFI <- df$`MFI+`[df$Concentration == i][[row]]
+            calc <- round((as.numeric(MFI)/as.numeric(ref_for_each_conc))*100,0)
+            calc_vect <- append(calc_vect, calc)
+        }
+        
+    }
+    df <- bind_cols(df, "% 4C Reference MFI"=calc_vect)
+    return(df)
+}
+
+## FOR UI USE ONLY
+## Convert the reference MFI table to a wide table, each column designated to each concentration
+## If 15 ng/test isn't included, will add to the table, but automatically toggle off of UI. 
+create_reference_MFI_table_wide_UI_only <- function(df){
+    
+    # Take only subset of raw stats table
+    df_selected <- select(df, c(Condition, Concentration, `% 4C Reference MFI`))
+
+    df_wide <- df_selected %>% pivot_wider(names_from = Concentration, values_from = `% 4C Reference MFI`)
+    colnames(df_wide)[1] <- "Time"
+    for(i in c(2:length(colnames(df_wide)))){
+        colnames(df_wide)[i] <- paste0(colnames(df_wide)[i], " ng/test")
+    }
+
+    if("15 ng/test" %in% colnames(df_wide)){
+        return(df_wide)
+    }
+    else{
+        df_wide <- add_column(df_wide, "15 ng/test" = c(NA), .after="Time")
+    }
+    return(df_wide)
+}
+
+create_raw_reference_MFI_table_wide <- function(df){
+    
+    # Take only subset of raw stats table
+    df_selected <- select(df, c(Condition, Concentration, `% 4C Reference MFI`))
+
+    df_wide <- df_selected %>% pivot_wider(names_from = Concentration, values_from = `% 4C Reference MFI`)
+    colnames(df_wide)[1] <- "Time"
+    for(i in c(2:length(colnames(df_wide)))){
+        colnames(df_wide)[i] <- paste0(colnames(df_wide)[i], " ng/test")
+    }
+
+    return(df_wide)
+}
+
+create_modified_reference_MFI_table_wide <- function(df){
+    df_selected <- select(df, c(Condition, Concentration, `% 4C Reference MFI`))
+
+    df2 <- df_selected %>% pivot_wider(names_from = Concentration, values_from = `% 4C Reference MFI`)
+    colnames(df2)[1] <- "Time"
+    for(i in c(2:length(colnames(df2)))){
+        # colnames(df2)[i] <- paste0("Conc_", colnames(df2)[i], "_ng")
+        colnames(df2)[i] <- paste0(colnames(df2)[i], " ng/test")
     }
     
-    if(is.null(df_csv)){
+    # if("Conc_15_ng" %in% colnames(df2)){
+    # if("15 ng/test" %in% colnames(df2)){
+    #     return(df2)
+    # }
+    # else{
+    #     df2 <- add_column(df2, "15 ng/test" = c(NA), .after="Time")
+    # }
+    return(df2)
+}
+
+concentrations_to_keep <- function(reference_MFI_data_wide, columns_to_include){
+    df <- reference_MFI_data_wide
+    
+    concentrations_to_keep <- c()
+    list_of_included_columns <- c()
+    for (i in columns_to_include) {
+        concentrations_to_keep <- cbind(concentrations_to_keep, df[[as.numeric(i)]])
+        list_of_included_columns <- c(list_of_included_columns, as.numeric(i))
+    }
+    if(is.null(df)){
         df_selected <- c()
     }
     else{
-        df_selected <- dplyr::select(df_csv, c(list_cols))
+        df_selected <- dplyr::select(df, c(list_of_included_columns))
     }
 
-    print(df_selected)
-    print(df_csv$Time)
-    # keep_conc <- df_selected
-    keep_conc <- cbind('Time'=df_csv$Time, df_selected)
+    concentrations_to_keep_df <- cbind('Time'=df$Time, df_selected)
 
-    
-
-    print(keep_conc)
-    return (keep_conc)
+    return (concentrations_to_keep_df)
 }
 
 concentrations_around_optimal <- function(optimal){
@@ -79,7 +145,7 @@ concentrations_around_optimal <- function(optimal){
     return(conc_around_optimal)
 }
 
-meltedDataTable <- function(df_full=template_data){
+melt_reference_mfi_table <- function(df_full=template_data){
     
     # Melt Columns by Time
     dataMelt <- melt(df_full, "Time", variable='Concentrations')
@@ -90,7 +156,7 @@ meltedDataTable <- function(df_full=template_data){
     
     return (dataMelt)
 }
-# dotPlotData <- meltedDataTable(fullDataTable(df_from_GUI))
+# dotPlotData <- melt_reference_mfi_table(fullDataTable(reference_MFI_data_wide))
 
 
 regressionDataTable <- function(df_full) {
@@ -103,7 +169,7 @@ regressionDataTable <- function(df_full) {
     # Threshold % of 4C MFI value to determine shelf-life
     threshold_y = 75
     
-    # df_csv <- df_from_GUI
+    # df_csv <- reference_MFI_data_wide
     # 
     # df_full <- cbind(df_csv, "Average"=rowMeans(df_csv[2:ncol(df_csv)]))
     
@@ -354,11 +420,10 @@ residual_vs_fit_plot <- function(df_melt, order){
         geom_hline(aes(yintercept=0)) +
         ylim(0-max(abs(fit_residuals)), 0+max(abs(fit_residuals))) +
         labs(title = 'Residuals vs. Fit Plot',
-             subtitle = "Check for lack of patterns in residuals. If any apparent patterns are visible in residual scatterplot, model requires adjustments.",
              x = 'Predicted % of 4C MFI', 
              y = 'Residuals')
     
-    return(ggplotly(p))
+    return(p)
 }
 
 residual_histogram <- function(df_melt, order){
@@ -373,22 +438,61 @@ residual_histogram <- function(df_melt, order){
     p <- ggplot(df_melt,aes(x=fit_residuals, label=Time)) + 
         geom_histogram(binwidth=sd(fit_residuals), boundary=0, fill = '#eb6864') +
         labs(title = 'Histogram of Residuals',
-             subtitle = "Generally, 95% of residuals should not be larger than 2x the standard deviation of the residuals.",
+             # subtitle = "Generally, 95% of residuals should not be larger than 2x the standard deviation of the residuals.",
              x = 'Residuals', 
              y = '# of Residuals')
     
     
-    return(ggplotly(p))
+    return(p)
+}
+
+find_residuals <- function(df_melt, order){
+    df_melt <- na.omit(df_melt)
+    
+    x <- na.omit(df_melt$Time)
+    y <- na.omit(df_melt$value)
+    n <- length(x)
+    fit <- lm(y ~ poly(x,order, raw=TRUE), data=df_melt)
+    fit_residuals <- resid(fit)
+    
+    return(fit_residuals)
+}
+
+normal_probability_plot <- function(df_melt, order, residuals){
+    
+    # And adding line with proper properties
+    p <- ggplot(mapping = aes(sample = residuals)) + 
+        stat_qq_point(size = 3,color = "#eb6864") + 
+        stat_qq_line(color="black") +
+        labs(title = 'Normal Probability Plot of Residuals',
+             x = 'Theoretical Quantiles', 
+             y = 'Residuals') +
+        theme(text=element_text(size = 11))
+    print(p)
+    return(p)
 }
 
 read_marker_data <- function(wave_data, sheet="Sheet1"){
-    wave_df <- read_xlsx(wave_data, sheet)
+    wave_df <- readxl::read_xlsx(wave_data, sheet)
     # print(wave_df)
     marker_info <- paste0(wave_df$`Target Species`,' ', wave_df$Specificity,' ', '(', wave_df$Clone, ')',' ', wave_df$Format)
     # print(marker_info)
     # print(wave_df$`Optimal (ng/test)`[wave_df$Specificity=='Integrin'])
     wave_df <- tibble(cbind(wave_df, 'Marker Description'=marker_info))
     return(wave_df)
+}
+
+
+
+anderson_darling_normality_test <- function(residuals){
+    ad <- ad.test(residuals)
+    # print(ad)
+    # sqrt(ad$statistic^2)
+    p_value <- ad$p.value
+    
+    # null hypothesis is that data DOES follow normal distribution
+    # can reject null hypothesis if p-value < 0.05 --> meaning we can say with sufficient evidence that data does NOT follow normal distribution
+    return(p_value)
 }
 
 
@@ -462,12 +566,13 @@ mfi_vs_concentration_plot <- function(df){
     p <- ggplot(df, aes(x=as.factor(Concentration), y=`MFI+`, group=Condition, color=as.factor(Condition))) + 
         geom_point(size=4) + 
         geom_line(size=1) + 
-        scale_colour_brewer(palette="Set2", labels=unique(paste0(df$Condition, " years"))) +
+        scale_colour_brewer(palette="Dark2", labels=unique(paste0(df$Condition, " years"))) +
         labs(title = 'MFI vs Concentration',
              x = 'Concentration (ng/test)', 
              y = 'MFI',
              color = "Time (years)")+
-        theme(text=element_text(size = 16))
+        theme(text=element_text(size = 11),
+              legend.position = "bottom")
     
     return(p)
 }
@@ -477,12 +582,13 @@ mfi_vs_time_plot <- function(df){
     p <- ggplot(df, aes(x=as.factor(Condition), y=`MFI+`, group=Concentration, color=as.factor(Concentration))) + 
         geom_point(size=4) + 
         geom_line(size=1) + 
-        scale_colour_brewer(palette="Set2", labels=unique(paste0(df$Concentration, " ng/test"))) +
+        scale_colour_brewer(palette="Dark2", labels=unique(paste0(df$Concentration, " ng/test"))) +
         labs(title = 'MFI vs Time',
              x = 'Time (years)', 
              y = 'MFI',
              color = "Concentration") +
-        theme(text=element_text(size = 16))
+        theme(text=element_text(size = 11),
+              legend.position = "bottom")
     
     return(p)
 }
@@ -494,12 +600,13 @@ stain_index <- function(df){
     p <- ggplot(df, aes(x=as.factor(Condition), y=`Stain Index`, group=Concentration, color=as.factor(Concentration))) + 
         geom_point(size=4) + 
         geom_line(size=1) + 
-        scale_colour_brewer(palette="Set2", labels=unique(paste0(df$Concentration, " ng/test"))) +
+        scale_colour_brewer(palette="Dark2", labels=unique(paste0(df$Concentration, " ng/test"))) +
         labs(title = 'Stain Index',
              x = 'Time (years)', 
              y = 'Stain Index',
              color = "Concentration") +
-        theme(text=element_text(size = 16)) +
+        theme(text=element_text(size = 11),
+              legend.position = "bottom") +
         ylim(0,NA)
     
     return(p)
@@ -512,12 +619,13 @@ signal_to_noise <- function(df){
     p <- ggplot(df, aes(x=as.factor(Condition), y=`Signal-to-Noise`, group=Concentration, color=as.factor(Concentration))) + 
         geom_point(size=4) + 
         geom_line(size=1) + 
-        scale_colour_brewer(palette="Set2", labels=unique(paste0(df$Concentration, " ng/test"))) +
+        scale_colour_brewer(palette="Dark2", labels=unique(paste0(df$Concentration, " ng/test"))) +
         labs(title = 'Signal-to-Noise',
              x = 'Time (years)', 
              y = 'Signal-to-Noise',
              color = "Concentration") +
-        theme(text=element_text(size = 16)) +
+        theme(text=element_text(size = 11),
+              legend.position = "bottom") +
         ylim(0,NA)
     
     return(p)
@@ -528,12 +636,13 @@ percent_positive <- function(df){
     p <- ggplot(df, aes(x=as.factor(Condition), y=`%+`, group=Concentration, color=as.factor(Concentration))) + 
         geom_point(size=4) + 
         geom_line(size=1) + 
-        scale_colour_brewer(palette="Set2", labels=unique(paste0(df$Concentration, " ng/test"))) +
+        scale_colour_brewer(palette="Dark2", labels=unique(paste0(df$Concentration, " ng/test"))) +
         labs(title = '(%) Positive',
              x = 'Time (years)', 
              y = '(%) Positive',
              color = "Concentration") +
-        theme(text=element_text(size = 16)) +
+        theme(text=element_text(size = 11),
+              legend.position = "bottom") +
         ylim(0,NA)
     
     return(p)
@@ -545,12 +654,13 @@ percent_of_4C_MFI <- function(df){
     p <- ggplot(df, aes(x=as.factor(Condition), y=`%+`, group=Concentration, color=as.factor(Concentration))) + 
         geom_point(size=4) + 
         geom_line(size=1) + 
-        scale_colour_brewer(palette="Set2", labels=unique(paste0(df$Concentration, " ng/test"))) +
-        labs(title = '(%) Positive',
+        scale_colour_brewer(palette="Dark2", labels=unique(paste0(df$Concentration, " ng/test"))) +
+        labs(title = '% of 4C Reference MFI',
              x = 'Time (years)', 
-             y = '(%) Positive',
+             y = '%',
              color = "Concentration") +
-        theme(text=element_text(size = 16)) +
+        theme(text=element_text(size = 11),
+              legend.position = "bottom") +
         ylim(0,NA)
     
     return(p)
@@ -564,7 +674,7 @@ percent_of_4C_MFI <- function(df){
 # END GOAL: Determine the shelf-life for each combination and if it passes min. requirements
 # Determine which combination of criteria give us a) most conservative estimates that still pass, b) most passes, c) best shelf-life estimates that still pass
 
-loop_through_for_summary <- function(data_directory, wave_summary_file, sheet, wave_number){
+loop_through_for_summary <- function(data_directory, wave_summary_file, sheet, wave_number, summary_output_file){
     tib <- tibble("Filename"=NA,
                   "Format"=NA,
                   "Min. Shelf-Life (days)"=NA,
@@ -584,7 +694,7 @@ loop_through_for_summary <- function(data_directory, wave_summary_file, sheet, w
                   # "Model p-value Pass/Fail"=NA
                   )
     # print(tib)
-    wave_summary <- read_xlsx(wave_summary_file, sheet=sheet)
+    wave_summary <- readxl::read_xlsx(wave_summary_file, sheet=sheet)
     # print(wave_summary)
     files_to_analyze <- wave_summary$Filename
     # for(file in unique(files_to_analyze)){
@@ -592,13 +702,12 @@ loop_through_for_summary <- function(data_directory, wave_summary_file, sheet, w
     # }
     for(file in unique(files_to_analyze)){
         df <- read_csv(paste0(data_directory, "\\", paste0(file, ".csv")), col_types = cols())
-        print(file)
 
         file <- paste0(file, ".csv")
-        melted_df <- meltedDataTable(df)
+        melted_df <- melt_reference_mfi_table(df)
         wave_df <- read_marker_data(wave_summary_file, sheet)
         optimal_value <- wave_df$`Optimal (ng/test)`[paste0(wave_df$`Filename`,".csv") == file]
-        optimal_df <- meltedDataTable(conc_to_exclude(df, concentrations_around_optimal(optimal_value)))
+        optimal_df <- melt_reference_mfi_table(concentrations_to_keep(df, concentrations_around_optimal(optimal_value)))
         
         format <- wave_df$`Format`[paste0(wave_df$`Filename`,".csv") == file]
         min_shelf_life <- wave_df$`Min. Shelf-Life (days)`[paste0(wave_df$`Filename`,".csv") == file]
@@ -624,7 +733,6 @@ loop_through_for_summary <- function(data_directory, wave_summary_file, sheet, w
     }
     tib <- tib[2:nrow(tib),]
 
-    print(tib)
     V1 <- as_tibble(ifelse(sapply(tibble(rep(NA, length(tib$Filename))), function(i) tib$`75% Threshold, No CI` < tib$`Min. Shelf-Life (days)` | is.na(tib$`75% Threshold, No CI`)),0, 1))
     V2 <- as_tibble(ifelse(sapply(tibble(rep(NA, length(tib$Filename))), function(i) tib$`80% Threshold, No CI` < tib$`Min. Shelf-Life (days)` | is.na(tib$`80% Threshold, No CI`)),0, 1))
     V3 <- as_tibble(ifelse(sapply(tibble(rep(NA, length(tib$Filename))), function(i) tib$`75% Threshold, Lwr 95% CI` < tib$`Min. Shelf-Life (days)` | is.na(tib$`75% Threshold, Lwr 95% CI`)),0, 1))
@@ -635,10 +743,8 @@ loop_through_for_summary <- function(data_directory, wave_summary_file, sheet, w
     V7 <- as_tibble(ifelse(sapply(tibble(rep(NA, length(tib$Filename))), function(i) tib$`Model p-value` < 0.05),1, 0))
     tib <- bind_cols(tib,V1, V2, V3, V4, V5, V6, V7)
     names(tib)[14:20] <- c("75%, No CI Pass/Fail", "80%, No CI Pass/Fail", "75%, 95% CI Pass/Fail", "80%, 95% CI Pass/Fail", "R-squared Pass/Fail", "Adj. R-squared Pass/Fail", "Model p-value Pass/Fail")
-    print(tib[,14:20])
-    print(tib)
-    print(colnames(tib))
-    write_xlsx(tib, paste0(wave_number,"_summary_of_results.xlsx"))
+
+    write_xlsx(tib, summary_output_file)
     
 }
 
@@ -665,11 +771,10 @@ loop_through_for_summary <- function(data_directory, wave_summary_file, sheet, w
 # summary(df[df$`Concentrations Included`=='Raw',11:17])
 
 find_optimal_combination <- function(summary_of_results_xlsx, wave_number){
-    df <- read_xlsx(summary_of_results_xlsx)
+    df <- readxl::read_xlsx(summary_of_results_xlsx)
     subset_summary <- df[,14:20]
     colnames(subset_summary) <- c("75% Threshold, No CI", "80% Threshold, No CI", "75% Threshold, Lwr 95% CI", "80% Threshold, Lwr 95% CI", "R-squared", "Adj. R-squared", "Model p-value")
 
-    print(subset_summary)
     new_df <- bind_cols(df[,c(1,5:6)], subset_summary)
 
     initial_tibble <- tibble("Condition"= NA, "75% Threshold, No CI"=NA, "80% Threshold, No CI"=NA, "75% Threshold, Lwr 95% CI"=NA, "80% Threshold, Lwr 95% CI"=NA)
@@ -698,8 +803,6 @@ find_optimal_combination <- function(summary_of_results_xlsx, wave_number){
     second_order_optimal <- sapply(4:7, function(i){
         mean(new_df[new_df$`Model Order`=="Second Order" & new_df$`Concentrations Included`=="Optimal +1/-2",][[i]])
     })
-    print("----------1.5y REQUIREMENT---------")
-    print(linear_raw)
    
     linear_tib <- tibble("Linear", linear[[1]], linear[[2]], linear[[3]], linear[[4]])
     second_order_tib <- tibble("Second Order", second_order[[1]], second_order[[2]], second_order[[3]], second_order[[4]])
@@ -726,7 +829,7 @@ find_optimal_combination <- function(summary_of_results_xlsx, wave_number){
 
 
 find_optimal_combination_p_val <- function(summary_of_results_xlsx, wave_number){
-    df <- read_xlsx(summary_of_results_xlsx)
+    df <- readxl::read_xlsx(summary_of_results_xlsx)
     subset_summary <- df[,14:20]
     colnames(subset_summary) <- c("75% Threshold, No CI", "80% Threshold, No CI", "75% Threshold, Lwr 95% CI", "80% Threshold, Lwr 95% CI", "R-squared", "Adj. R-squared", "Model p-value")
     
@@ -757,9 +860,6 @@ find_optimal_combination_p_val <- function(summary_of_results_xlsx, wave_number)
     second_order_optimal <- sapply(4:7, function(i){
         mean(new_df[new_df$`Model Order`=="Second Order" & new_df$`Concentrations Included`=="Optimal +1/-2" & new_df$`Model p-value` == 1,][[i]])
     })
-    print("----------P-value---------")
-    print(linear_raw)
-    print(new_df[new_df$`Model Order`=="Linear" & new_df$`Model p-value` == 1,])
     
     linear_tib <- tibble("Linear", linear[[1]], linear[[2]], linear[[3]], linear[[4]])
     second_order_tib <- tibble("Second Order", second_order[[1]], second_order[[2]], second_order[[3]], second_order[[4]])
@@ -787,7 +887,7 @@ find_optimal_combination_p_val <- function(summary_of_results_xlsx, wave_number)
 ##################################################################################################3
 
 find_optimal_combination_p_val_r_sqd <- function(summary_of_results_xlsx, wave_number){
-    df <- read_xlsx(summary_of_results_xlsx)
+    df <- readxl::read_xlsx(summary_of_results_xlsx)
     subset_summary <- df[,14:20]
     colnames(subset_summary) <- c("75% Threshold, No CI", "80% Threshold, No CI", "75% Threshold, Lwr 95% CI", "80% Threshold, Lwr 95% CI", "R-squared", "Adj. R-squared", "Model p-value")
     
@@ -818,12 +918,8 @@ find_optimal_combination_p_val_r_sqd <- function(summary_of_results_xlsx, wave_n
     second_order_optimal <- sapply(4:7, function(i){
         mean(new_df[new_df$`Model Order`=="Second Order" & new_df$`Concentrations Included`=="Optimal +1/-2" & new_df$`Model p-value` == 1 & new_df$`R-squared` == 1,][[i]])
     })
-    print("----------P-value AND R^2---------")
-    print(linear)
-    print(new_df[new_df$`Model Order`=="Linear" & new_df$`Model p-value` == 1,])
-    print(mean(new_df[new_df$`Model Order`=="Linear" & new_df$`Concentrations Included`=="Raw",][[5]]))
     
-    
+
     linear_tib <- tibble("Linear", linear[[1]], linear[[2]], linear[[3]], linear[[4]])
     second_order_tib <- tibble("Second Order", second_order[[1]], second_order[[2]], second_order[[3]], second_order[[4]])
     raw_tib <- tibble("Raw", raw[[1]], raw[[2]], raw[[3]], raw[[4]])
@@ -850,17 +946,17 @@ find_optimal_combination_p_val_r_sqd <- function(summary_of_results_xlsx, wave_n
 
 
 find_optimal_combination_high_r_sqd <- function(summary_of_results_xlsx, wave_number){
-    df <- read_xlsx(summary_of_results_xlsx)
+    df <- readxl::read_xlsx(summary_of_results_xlsx)
     subset_summary <- df[,14:20]
     colnames(subset_summary) <- c("75% Threshold, No CI", "80% Threshold, No CI", "75% Threshold, Lwr 95% CI", "80% Threshold, Lwr 95% CI", "R-squared", "Adj. R-squared", "Model p-value")
     
     new_df <- bind_cols(df[,c(1,5:6)], subset_summary)
     initial_tibble <- tibble("Condition"= NA, "75% Threshold, No CI"=NA, "80% Threshold, No CI"=NA, "75% Threshold, Lwr 95% CI"=NA, "80% Threshold, Lwr 95% CI"=NA)
     
-    linear <- sapply(4:7, function(i){
+    linear <- sapply(8:9, function(i){
         mean(new_df[new_df$`Model Order`=="Linear" & new_df$`Model p-value` == 1,][[i]])
     })
-    second_order <- sapply(4:7, function(i){
+    second_order <- sapply(8:9, function(i){
         mean(new_df[new_df$`Model Order`=="Second Order" & new_df$`Model p-value` == 1,][[i]])
     })
     raw <- sapply(8:9, function(i){
@@ -906,13 +1002,74 @@ find_optimal_combination_high_r_sqd <- function(summary_of_results_xlsx, wave_nu
     write_xlsx(mean_summary, paste0(wave_number, "_high_r_sqd_mean_results.xlsx"))
     
 }
-wave_overview_file <- "wave5_summary.xlsx"
-summary_xlsx_file <- "Wave5_summary_of_results.xlsx"
-wave_number <- "Wave5"
-# loop_through_for_summary("C:\\Users\\10294643\\Desktop\\Rotation 2 - San Diego\\Stability\\Wave 5\\MFI Data", wave_overview_file, "Sheet1", wave_number)
+
+find_times_with_valid_pvalue <- function(summary_of_results_xlsx, wave_number){
+    df <- readxl::read_xlsx(summary_of_results_xlsx)
+    subset_summary <- df[,14:20]
+    colnames(subset_summary) <- c("75% Threshold, No CI", "80% Threshold, No CI", "75% Threshold, Lwr 95% CI", "80% Threshold, Lwr 95% CI", "R-squared", "Adj. R-squared", "Model p-value")
+    
+    new_df <- bind_cols(df[,c(1,5:6)], subset_summary)
+    initial_tibble <- tibble("Condition"= NA, "75% Threshold, No CI"=NA, "80% Threshold, No CI"=NA, "75% Threshold, Lwr 95% CI"=NA, "80% Threshold, Lwr 95% CI"=NA)
+    
+    linear <- sapply(10, function(i){
+        mean(new_df[new_df$`Model Order`=="Linear",][[i]])
+    })
+    second_order <- sapply(10, function(i){
+        mean(new_df[new_df$`Model Order`=="Second Order",][[i]])
+    })
+    raw <- sapply(10, function(i){
+        mean(new_df[new_df$`Concentrations Included`=="Raw",][[i]])
+    })
+    optimal <- sapply(10, function(i){
+        mean(new_df[new_df$`Concentrations Included`=="Optimal +1/-2",][[i]])
+    })
+    linear_raw <- sapply(10, function(i){
+        mean(new_df[new_df$`Model Order`=="Linear" & new_df$`Concentrations Included`=="Raw",][[i]])
+    })
+    linear_optimal <- sapply(10, function(i){
+        mean(new_df[new_df$`Model Order`=="Linear" & new_df$`Concentrations Included`=="Optimal +1/-2",][[i]])
+    })
+    second_order_raw <- sapply(10, function(i){
+        mean(new_df[new_df$`Model Order`=="Second Order" & new_df$`Concentrations Included`=="Raw",][[i]])
+    })
+    second_order_optimal <- sapply(10, function(i){
+        mean(new_df[new_df$`Model Order`=="Second Order" & new_df$`Concentrations Included`=="Optimal +1/-2",][[i]])
+    })
+    
+    
+    
+    linear_tib <- tibble("Linear", linear[[1]])
+    second_order_tib <- tibble("Second Order", second_order[[1]])
+    raw_tib <- tibble("Raw", raw[[1]])
+    optimal_tib <- tibble("Optimal +1/-2", optimal[[1]])
+    linear_raw_tib <- tibble("Linear, Raw", linear_raw[[1]])
+    linear_optimal_tib <- tibble("Linear, Optimal +1/-2", linear_optimal[[1]])
+    second_order_raw_tib <- tibble("Second Order, Raw", second_order_raw[[1]])
+    second_order_optimal_tib <- tibble("Second Order, Optimal +1/-2", second_order_optimal[[1]])
+    
+    dfs <- list(linear_tib, second_order_tib, raw_tib, optimal_tib, linear_raw_tib, linear_optimal_tib, second_order_raw_tib, second_order_optimal_tib)
+    column_names <- c("Condition", "Model p-value")
+    
+    new_tibs <- lapply(dfs, function(x) {
+        names(x) <- column_names
+        x
+    })
+    
+    mean_summary <- bind_rows(initial_tibble, new_tibs)
+    mean_summary <- mean_summary[2:nrow(mean_summary),]
+    write_xlsx(mean_summary, paste0(wave_number, "_valid_p_value_results.xlsx"))
+    
+}
+
+wave_overview_file <- "allwaves_summary.xlsx"
+summary_output_file <- "allwaves_summary_of_results.xlsx"
+summary_xlsx_file <- summary_output_file
+wave_number <- "AllWaves"
+# loop_through_for_summary("C:\\Users\\10294643\\Desktop\\Rotation 2 - San Diego\\Stability\\Wave 3\\MFI Data - fixed", wave_overview_file, "All", wave_number, summary_output_file)
 # 
 # # # list.files("C:\\Users\\10294643\\Desktop\\Rotation 2 - San Diego\\Stability\\Wave 5\\MFI Data", "Wave5")
 # find_optimal_combination(summary_xlsx_file, wave_number)
 # find_optimal_combination_p_val(summary_xlsx_file, wave_number)
 # find_optimal_combination_p_val_r_sqd(summary_xlsx_file, wave_number)
 # find_optimal_combination_high_r_sqd(summary_xlsx_file, wave_number)
+# find_times_with_valid_pvalue(summary_xlsx_file, wave_number)
