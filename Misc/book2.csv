@@ -1,0 +1,201 @@
+Time,Concentrations,value,Labels,Dataset,id
+0,15 ng/test,100,15 ng/test,Mass Size,1
+0.5,15 ng/test,100,15 ng/test,Mass Size,2
+1,15 ng/test,95,15 ng/test,Mass Size,3
+1.5,15 ng/test,95,15 ng/test,Mass Size,4
+2,15 ng/test,74,15 ng/test,Mass Size,5
+3,15 ng/test,76,15 ng/test,Mass Size,6
+4,15 ng/test,80,15 ng/test,Mass Size,7
+5,15 ng/test,71,15 ng/test,Mass Size,8
+0,30 ng/test,100,30 ng/test,Mass Size,9
+0.5,30 ng/test,100,30 ng/test,Mass Size,10
+1,30 ng/test,97,30 ng/test,Mass Size,11
+1.5,30 ng/test,98,30 ng/test,Mass Size,12
+2,30 ng/test,59,30 ng/test,Mass Size,13
+3,30 ng/test,60,30 ng/test,Mass Size,14
+4,30 ng/test,65,30 ng/test,Mass Size,15
+5,30 ng/test,64,30 ng/test,Mass Size,16
+0,60 ng/test,100,60 ng/test,Mass Size,17
+0.5,60 ng/test,102,60 ng/test,Mass Size,18
+1,60 ng/test,82,60 ng/test,Mass Size,19
+1.5,60 ng/test,79,60 ng/test,Mass Size,20
+2,60 ng/test,76,60 ng/test,Mass Size,21
+3,60 ng/test,79,60 ng/test,Mass Size,22
+4,60 ng/test,76,60 ng/test,Mass Size,23
+5,60 ng/test,66,60 ng/test,Mass Size,24
+0,125 ng/test,100,125 ng/test,Mass Size,25
+0.5,125 ng/test,106,125 ng/test,Mass Size,26
+1,125 ng/test,98,125 ng/test,Mass Size,27
+1.5,125 ng/test,102,125 ng/test,Mass Size,28
+2,125 ng/test,76,125 ng/test,Mass Size,29
+3,125 ng/test,98,125 ng/test,Mass Size,30
+4,125 ng/test,85,125 ng/test,Mass Size,31
+5,125 ng/test,70,125 ng/test,Mass Size,32
+0,250 ng/test,100,250 ng/test,Mass Size,33
+0.5,250 ng/test,100,250 ng/test,Mass Size,34
+1,250 ng/test,82,250 ng/test,Mass Size,35
+1.5,250 ng/test,82,250 ng/test,Mass Size,36
+2,250 ng/test,50,250 ng/test,Mass Size,37
+3,250 ng/test,52,250 ng/test,Mass Size,38
+4,250 ng/test,75,250 ng/test,Mass Size,39
+5,250 ng/test,51,250 ng/test,Mass Size,40
+0,500 ng/test,100,500 ng/test,Mass Size,41
+0.5,500 ng/test,96,500 ng/test,Mass Size,42
+1,500 ng/test,65,500 ng/test,Mass Size,43
+1.5,500 ng/test,96,500 ng/test,Mass Size,44
+2,500 ng/test,70,500 ng/test,Mass Size,45
+3,500 ng/test,70,500 ng/test,Mass Size,46
+4,500 ng/test,94,500 ng/test,Mass Size,47
+5,500 ng/test,93,500 ng/test,Mass Size,48
+0,1000 ng/test,100,1000 ng/test,Mass Size,49
+0.5,1000 ng/test,99,1000 ng/test,Mass Size,50
+1,1000 ng/test,99,1000 ng/test,Mass Size,51
+1.5,1000 ng/test,83,1000 ng/test,Mass Size,52
+2,1000 ng/test,59,1000 ng/test,Mass Size,53
+3,1000 ng/test,66,1000 ng/test,Mass Size,54
+4,1000 ng/test,83,1000 ng/test,Mass Size,55
+5,1000 ng/test,59,1000 ng/test,Mass Size,56
+0,2000 ng/test,100,2000 ng/test,Mass Size,57
+0.5,2000 ng/test,56,2000 ng/test,Mass Size,58
+1,2000 ng/test,56,2000 ng/test,Mass Size,59
+1.5,2000 ng/test,55,2000 ng/test,Mass Size,60
+2,2000 ng/test,37,2000 ng/test,Mass Size,61
+3,2000 ng/test,55,2000 ng/test,Mass Size,62
+4,2000 ng/test,42,2000 ng/test,Mass Size,63
+5,2000 ng/test,36,2000 ng/test,Mass Size,64
+0,60_set1 ng/test,100,60_set1 ng/test,Test Size,65
+0.5,60_set1 ng/test,100,60_set1 ng/test,Test Size,66
+1,60_set1 ng/test,100,60_set1 ng/test,Test Size,67
+1.5,60_set1 ng/test,95,60_set1 ng/test,Test Size,68
+2,60_set1 ng/test,96,60_set1 ng/test,Test Size,69
+3,60_set1 ng/test,89,60_set1 ng/test,Test Size,70
+4,60_set1 ng/test,87,60_set1 ng/test,Test Size,71
+5,60_set1 ng/test,83,60_set1 ng/test,Test Size,72
+0,60_set2 ng/test,100,60_set2 ng/test,Test Size,73
+0.5,60_set2 ng/test,99,60_set2 ng/test,Test Size,74
+1,60_set2 ng/test,94,60_set2 ng/test,Test Size,75
+1.5,60_set2 ng/test,93,60_set2 ng/test,Test Size,76
+2,60_set2 ng/test,92,60_set2 ng/test,Test Size,77
+3,60_set2 ng/test,86,60_set2 ng/test,Test Size,78
+4,60_set2 ng/test,82,60_set2 ng/test,Test Size,79
+5,60_set2 ng/test,81,60_set2 ng/test,Test Size,80
+0,60_set3 ng/test,100,60_set3 ng/test,Test Size,81
+0.5,60_set3 ng/test,96,60_set3 ng/test,Test Size,82
+1,60_set3 ng/test,97,60_set3 ng/test,Test Size,83
+1.5,60_set3 ng/test,96,60_set3 ng/test,Test Size,84
+2,60_set3 ng/test,92,60_set3 ng/test,Test Size,85
+3,60_set3 ng/test,87,60_set3 ng/test,Test Size,86
+4,60_set3 ng/test,83,60_set3 ng/test,Test Size,87
+5,60_set3 ng/test,83,60_set3 ng/test,Test Size,88
+0,125_1.5y ng/test,100,125_1.5y ng/test,1.5y + 5y full titration,89
+0.5,125_1.5y ng/test,98.06788511749347,125_1.5y ng/test,1.5y + 5y full titration,90
+1,125_1.5y ng/test,98.06788511749347,125_1.5y ng/test,1.5y + 5y full titration,91
+1.5,125_1.5y ng/test,95.47432550043517,125_1.5y ng/test,1.5y + 5y full titration,92
+0,60_1.5y ng/test,100,60_1.5y ng/test,1.5y + 5y full titration,93
+0.5,60_1.5y ng/test,98.55829502716256,60_1.5y ng/test,1.5y + 5y full titration,94
+1,60_1.5y ng/test,95.48683660676974,60_1.5y ng/test,1.5y + 5y full titration,95
+1.5,60_1.5y ng/test,93.20936063518596,60_1.5y ng/test,1.5y + 5y full titration,96
+0,30_1.5y ng/test,100,30_1.5y ng/test,1.5y + 5y full titration,97
+0.5,30_1.5y ng/test,96.90955486248937,30_1.5y ng/test,1.5y + 5y full titration,98
+1,30_1.5y ng/test,93.25205557130705,30_1.5y ng/test,1.5y + 5y full titration,99
+1.5,30_1.5y ng/test,94.38616387865041,30_1.5y ng/test,1.5y + 5y full titration,100
+0,15 ng/test,100,15 ng/test,1.5y + 5y full titration,101
+0.5,15 ng/test,100,15 ng/test,1.5y + 5y full titration,102
+1,15 ng/test,95,15 ng/test,1.5y + 5y full titration,103
+1.5,15 ng/test,95,15 ng/test,1.5y + 5y full titration,104
+2,15 ng/test,74,15 ng/test,1.5y + 5y full titration,105
+3,15 ng/test,76,15 ng/test,1.5y + 5y full titration,106
+4,15 ng/test,80,15 ng/test,1.5y + 5y full titration,107
+5,15 ng/test,71,15 ng/test,1.5y + 5y full titration,108
+0,30 ng/test,100,30 ng/test,1.5y + 5y full titration,109
+0.5,30 ng/test,100,30 ng/test,1.5y + 5y full titration,110
+1,30 ng/test,97,30 ng/test,1.5y + 5y full titration,111
+1.5,30 ng/test,98,30 ng/test,1.5y + 5y full titration,112
+2,30 ng/test,59,30 ng/test,1.5y + 5y full titration,113
+3,30 ng/test,60,30 ng/test,1.5y + 5y full titration,114
+4,30 ng/test,65,30 ng/test,1.5y + 5y full titration,115
+5,30 ng/test,64,30 ng/test,1.5y + 5y full titration,116
+0,60 ng/test,100,60 ng/test,1.5y + 5y full titration,117
+0.5,60 ng/test,102,60 ng/test,1.5y + 5y full titration,118
+1,60 ng/test,82,60 ng/test,1.5y + 5y full titration,119
+1.5,60 ng/test,79,60 ng/test,1.5y + 5y full titration,120
+2,60 ng/test,76,60 ng/test,1.5y + 5y full titration,121
+3,60 ng/test,79,60 ng/test,1.5y + 5y full titration,122
+4,60 ng/test,76,60 ng/test,1.5y + 5y full titration,123
+5,60 ng/test,66,60 ng/test,1.5y + 5y full titration,124
+0,125 ng/test,100,125 ng/test,1.5y + 5y full titration,125
+0.5,125 ng/test,106,125 ng/test,1.5y + 5y full titration,126
+1,125 ng/test,98,125 ng/test,1.5y + 5y full titration,127
+1.5,125 ng/test,102,125 ng/test,1.5y + 5y full titration,128
+2,125 ng/test,76,125 ng/test,1.5y + 5y full titration,129
+3,125 ng/test,98,125 ng/test,1.5y + 5y full titration,130
+4,125 ng/test,85,125 ng/test,1.5y + 5y full titration,131
+5,125 ng/test,70,125 ng/test,1.5y + 5y full titration,132
+0,250 ng/test,100,250 ng/test,1.5y + 5y full titration,133
+0.5,250 ng/test,100,250 ng/test,1.5y + 5y full titration,134
+1,250 ng/test,82,250 ng/test,1.5y + 5y full titration,135
+1.5,250 ng/test,82,250 ng/test,1.5y + 5y full titration,136
+2,250 ng/test,50,250 ng/test,1.5y + 5y full titration,137
+3,250 ng/test,52,250 ng/test,1.5y + 5y full titration,138
+4,250 ng/test,75,250 ng/test,1.5y + 5y full titration,139
+5,250 ng/test,51,250 ng/test,1.5y + 5y full titration,140
+0,500 ng/test,100,500 ng/test,1.5y + 5y full titration,141
+0.5,500 ng/test,96,500 ng/test,1.5y + 5y full titration,142
+1,500 ng/test,65,500 ng/test,1.5y + 5y full titration,143
+1.5,500 ng/test,96,500 ng/test,1.5y + 5y full titration,144
+2,500 ng/test,70,500 ng/test,1.5y + 5y full titration,145
+3,500 ng/test,70,500 ng/test,1.5y + 5y full titration,146
+4,500 ng/test,94,500 ng/test,1.5y + 5y full titration,147
+5,500 ng/test,93,500 ng/test,1.5y + 5y full titration,148
+0,1000 ng/test,100,1000 ng/test,1.5y + 5y full titration,149
+0.5,1000 ng/test,99,1000 ng/test,1.5y + 5y full titration,150
+1,1000 ng/test,99,1000 ng/test,1.5y + 5y full titration,151
+1.5,1000 ng/test,83,1000 ng/test,1.5y + 5y full titration,152
+2,1000 ng/test,59,1000 ng/test,1.5y + 5y full titration,153
+3,1000 ng/test,66,1000 ng/test,1.5y + 5y full titration,154
+4,1000 ng/test,83,1000 ng/test,1.5y + 5y full titration,155
+5,1000 ng/test,59,1000 ng/test,1.5y + 5y full titration,156
+0,2000 ng/test,100,2000 ng/test,1.5y + 5y full titration,157
+0.5,2000 ng/test,56,2000 ng/test,1.5y + 5y full titration,158
+1,2000 ng/test,56,2000 ng/test,1.5y + 5y full titration,159
+1.5,2000 ng/test,55,2000 ng/test,1.5y + 5y full titration,160
+2,2000 ng/test,37,2000 ng/test,1.5y + 5y full titration,161
+3,2000 ng/test,55,2000 ng/test,1.5y + 5y full titration,162
+4,2000 ng/test,42,2000 ng/test,1.5y + 5y full titration,163
+5,2000 ng/test,36,2000 ng/test,1.5y + 5y full titration,164
+0,125_1.5y ng/test,100,125_1.5y ng/test,1.5y + 5y short titration,165
+0.5,125_1.5y ng/test,98.06788511749347,125_1.5y ng/test,1.5y + 5y short titration,166
+1,125_1.5y ng/test,98.06788511749347,125_1.5y ng/test,1.5y + 5y short titration,167
+1.5,125_1.5y ng/test,95.47432550043517,125_1.5y ng/test,1.5y + 5y short titration,168
+0,60_1.5y ng/test,100,60_1.5y ng/test,1.5y + 5y short titration,169
+0.5,60_1.5y ng/test,98.55829502716256,60_1.5y ng/test,1.5y + 5y short titration,170
+1,60_1.5y ng/test,95.48683660676974,60_1.5y ng/test,1.5y + 5y short titration,171
+1.5,60_1.5y ng/test,93.20936063518596,60_1.5y ng/test,1.5y + 5y short titration,172
+0,30_1.5y ng/test,100,30_1.5y ng/test,1.5y + 5y short titration,173
+0.5,30_1.5y ng/test,96.90955486248937,30_1.5y ng/test,1.5y + 5y short titration,174
+1,30_1.5y ng/test,93.25205557130705,30_1.5y ng/test,1.5y + 5y short titration,175
+1.5,30_1.5y ng/test,94.38616387865041,30_1.5y ng/test,1.5y + 5y short titration,176
+0,30 ng/test,100,30 ng/test,1.5y + 5y short titration,177
+0.5,30 ng/test,100,30 ng/test,1.5y + 5y short titration,178
+1,30 ng/test,97,30 ng/test,1.5y + 5y short titration,179
+1.5,30 ng/test,98,30 ng/test,1.5y + 5y short titration,180
+2,30 ng/test,59,30 ng/test,1.5y + 5y short titration,181
+3,30 ng/test,60,30 ng/test,1.5y + 5y short titration,182
+4,30 ng/test,65,30 ng/test,1.5y + 5y short titration,183
+5,30 ng/test,64,30 ng/test,1.5y + 5y short titration,184
+0,60 ng/test,100,60 ng/test,1.5y + 5y short titration,185
+0.5,60 ng/test,102,60 ng/test,1.5y + 5y short titration,186
+1,60 ng/test,82,60 ng/test,1.5y + 5y short titration,187
+1.5,60 ng/test,79,60 ng/test,1.5y + 5y short titration,188
+2,60 ng/test,76,60 ng/test,1.5y + 5y short titration,189
+3,60 ng/test,79,60 ng/test,1.5y + 5y short titration,190
+4,60 ng/test,76,60 ng/test,1.5y + 5y short titration,191
+5,60 ng/test,66,60 ng/test,1.5y + 5y short titration,192
+0,125 ng/test,100,125 ng/test,1.5y + 5y short titration,193
+0.5,125 ng/test,106,125 ng/test,1.5y + 5y short titration,194
+1,125 ng/test,98,125 ng/test,1.5y + 5y short titration,195
+1.5,125 ng/test,102,125 ng/test,1.5y + 5y short titration,196
+2,125 ng/test,76,125 ng/test,1.5y + 5y short titration,197
+3,125 ng/test,98,125 ng/test,1.5y + 5y short titration,198
+4,125 ng/test,85,125 ng/test,1.5y + 5y short titration,199
+5,125 ng/test,70,125 ng/test,1.5y + 5y short titration,200

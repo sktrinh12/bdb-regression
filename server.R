@@ -1,7 +1,7 @@
 source('global.R')
-example_file <- read.csv('stability_stats.csv')
 wave_summary_file <- "wave5_summary.xlsx"
 mypptx <- read_pptx("bd_template_homemade.pptx")
+
 server = function(input, output, session) {
     
     ########################## TEMPLATE DATA ##########################
@@ -25,13 +25,25 @@ server = function(input, output, session) {
         }
     )
     
+    output$download_template_file <- downloadHandler(
+        filename <- function() {
+            paste("stats_template", "xlsx", sep=".")
+        },
+        content = function(file) {
+            file.copy('stability_stats_template.xlsx', file)
+        },
+        contentType = "text/xlsx"
+    )
     ########################## EXAMPLE DATA ###########################
     # Download Example Stats File
     output$downloadExample <- downloadHandler(
-        filename = 'stability_stats_example.csv',
+        filename <- function() {
+            paste("stats_example", "xlsx", sep=".")
+        },
         content = function(file) {
-            write.csv(example_file, file, row.names=FALSE)
-        }
+            file.copy('stability_stats_example.xlsx', file)
+        },
+        contentType = "text/xlsx"
     )
     
     ############################### GUI ONLY ########################################
@@ -127,7 +139,7 @@ server = function(input, output, session) {
             labs(x = "Time (years)",
                  y = "% of 4C Reference MFI") +
             theme_minimal() +
-            scale_color_brewer(palette = 'Reds', na.translate = F,
+            scale_color_brewer(palette = 'Dark2', na.translate = F,
                                labels = unique(raw_melted_data()$Labels)) +
             stat_regline_equation(data=raw_melted_data(), 
                                   aes(x=Time, y=value,
@@ -321,10 +333,10 @@ server = function(input, output, session) {
             labs(x = "Time (years)",
                  y = "% of 4C Reference MFI") +
             theme_minimal() +
-            scale_color_brewer(palette = 'Reds', na.translate = F,
+            scale_color_brewer(palette = 'Dark2', na.translate = F,
                                labels = unique(keep$Labels)) +
             stat_regline_equation(data=keep, 
-                                  aes(x=Time, y=value,label=paste(..eq.label.., ..rr.label..,..adj.rr.label.., sep = "~~~~~~")), 
+                                  aes(x=Time, y=value,label=paste(..eq.label.., ..rr.label.., sep = "~~~~~~")), 
                                   formula = y ~ poly(x,poly_order(),raw=TRUE), method="lm", col="red",
                                   label.x.npc="center",label.y.npc="top",size=5) +
             theme(text=element_text(size = 14),
@@ -577,7 +589,7 @@ server = function(input, output, session) {
         df <- tibble("Shelf-Life (days)" = c(round(solve_for_lower_shelf_life(raw_melted_data(), poly_order(), 0.95, 75),1)*365),
                      "Shelf-Life (years)" = c(round(solve_for_lower_shelf_life(raw_melted_data(), poly_order(), 0.95, 75),1)),
                      "R-squared" = c(raw_R_sq_val()),
-                     "Model p-value"=c(format(round(raw_poly_eval()$b_pvalue,2), nsmall = 3))
+                     "Model p-value"=c(format(round(raw_poly_eval()$b_pvalue,3), nsmall = 3))
         )
     })
     
@@ -585,7 +597,7 @@ server = function(input, output, session) {
         df <- tibble("Shelf-Life (days)" = c(round(solve_for_lower_shelf_life(keep(), poly_order(), 0.95, 75),1)*365),
                      "Shelf-Life (years)" = c(round(solve_for_lower_shelf_life(keep(), poly_order(), 0.95, 75),1)),
                      "R-squared" = c(format(round(R_sq_val(),2),nsmall=2)),
-                     "Model p-value"=c(format(round(poly_eval()$b_pvalue,2), nsmall = 3))
+                     "Model p-value"=c(format(round(poly_eval()$b_pvalue,3), nsmall = 3))
         )
     })
 
@@ -607,6 +619,41 @@ server = function(input, output, session) {
             )
     })
     
+    raw_model_pvalue_color <- reactive({
+        if( raw_poly_eval()$b_pvalue >= 0.05 ){ ## Model coeff. not statistically significant
+           return("red")
+        }
+        else if( raw_poly_eval()$b_pvalue < 0.05 ){ # Model coeff. is statistically significant
+            return("#2DC62D")
+        }
+    })
+    
+    modified_model_pvalue_color <- reactive({
+        if( poly_eval()$b_pvalue >= 0.05 ){ ## Model coeff. not statistically significant
+            return("red")
+        }
+        else if( poly_eval()$b_pvalue < 0.05 ){ # Model coeff. is statistically significant
+            return("#2DC62D")
+        }
+    })
+    
+    raw_ad_pvalue_color <- reactive({
+        if( raw_anderson_darling_normality_test_pvalue() >= 0.05 ){ ## Normal distribution
+            return("#2DC62D")
+        }
+        else if( raw_anderson_darling_normality_test_pvalue() < 0.05 ){ # Not normal distribution
+            return("red")
+        }
+    })
+    
+    modified_ad_pvalue_color <- reactive({
+        if( anderson_darling_normality_test_pvalue() >= 0.05 ){ ## Normal distribution
+            return("#2DC62D")
+        }
+        else if( anderson_darling_normality_test_pvalue() < 0.05 ){ # Not normal distribution
+            return("red")
+        }
+    })
     
     ################## R Markdown Report ######################
     output$report <- downloadHandler(
@@ -677,7 +724,7 @@ server = function(input, output, session) {
     cell_pops <- reactive({
         bl1 <- block_list(fpar(
             ftext(input$model_system_data, fp_text(
-                bold=FALSE, color = "red", font.size = 12
+                bold=FALSE, color = "black", font.size = 12
             ))
         ))
     })
@@ -789,6 +836,7 @@ server = function(input, output, session) {
                         bg(bg = "#FBF59E", part = "header") %>%
                         align(align="center", part="all") %>%
                         fontsize(size = 14, part = "body") %>%
+                        color(i = 1, j = 4, color = raw_model_pvalue_color()) %>%
                         hline_top(part = "all", border = fp_border(color="black", width=2)),
                     location = ph_location_type(type = "body", position_right = F, position_top = F)
                 ) %>%
@@ -829,6 +877,7 @@ server = function(input, output, session) {
                         bg(bg = "#FBF59E", part = "header") %>%
                         align(align="center", part="all") %>%
                         fontsize(size = 12, part = "header") %>%
+                        color(i = 1, j = 1, color = raw_ad_pvalue_color()) %>%
                         fontsize(size = 16, part = "body"),
                     location = ph_location_type(type = "body", left = 7, index = 3, position_right = T)
                 ) %>%
@@ -861,6 +910,7 @@ server = function(input, output, session) {
                         bg(bg = "#FBF59E", part = "header") %>%
                         align(align="center", part="all") %>%
                         fontsize(size = 14, part = "body") %>%
+                        color(i = 1, j = 4, color = modified_model_pvalue_color()) %>%
                         hline_top(part = "all", border = fp_border(color="black", width=2)),
                     location = ph_location_type(type = "body", position_right = F, position_top = F)
                 ) %>%
@@ -905,6 +955,7 @@ server = function(input, output, session) {
                         bg(bg = "#FBF59E", part = "header") %>%
                         align(align="center", part="all") %>%
                         fontsize(size = 12, part = "header") %>%
+                        color(i = 1, j = 1, color = modified_ad_pvalue_color()) %>%
                         fontsize(size = 16, part = "body"),
                     location = ph_location_type(type = "body", left = 7, index = 3, position_right = T)
                 ) %>%
