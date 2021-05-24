@@ -71,7 +71,7 @@ ui = tagList(
                      #     '2000 ng/test' = 9
                      # )),
                      # actionButton("write_results", "Save Summary Results to CSV", class = "btn-secondary"),
-                     downloadButton("report", "Generate report", class = "btn-primary"),
+                     # downloadButton("report", "Generate report", class = "btn-primary"),
                      downloadButton("pptx_id", "Download PPT", class = "btn-primary")
                  ),
                  mainPanel(

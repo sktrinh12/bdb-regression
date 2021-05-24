@@ -744,16 +744,16 @@ server = function(input, output, session) {
                     value = "Reagents Protocol", 
                     location = ph_location_type(type = "title")
                 ) %>%
-                ################### HISTOGRAM PLOTS SLIDE ##################
-                add_slide(layout = "Title and Content", master = "Office Theme") %>%
-                    ph_with(
-                        value = paste0(input$pop_number, ":  Histogram Plots"),
-                        location = ph_location_type(type = "title")
-                ) %>%
                 ################### SSC PLOTS SLIDE ##################
                 add_slide(layout = "Title and Content", master = "Office Theme") %>%
                     ph_with(
                         value = "SSC Plots", 
+                        location = ph_location_type(type = "title")
+                    ) %>%
+                ################### HISTOGRAM PLOTS SLIDE ##################
+                add_slide(layout = "Title and Content", master = "Office Theme") %>%
+                    ph_with(
+                        value = paste0(input$pop_number, ":  Histogram Plots"),
                         location = ph_location_type(type = "title")
                 ) %>%
                 ################### MFI PLOTS SLIDE ##################
