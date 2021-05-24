@@ -1,0 +1,9 @@
+Condition,"75% Threshold, No CI","80% Threshold, No CI","75% Threshold, Lwr 95% CI","80% Threshold, Lwr 95% CI"
+"Linear, Raw",0.5625,0.4375,0.4375,0.3125
+"Linear, Optimal",0.5625,0.4375,0.4375,0.3125
+"2nd Order, Raw",0.625,0.5,0.5,0.5
+"2nd Order, Optimal",0.5625,0.5,0.4375,0.5
+Linear,0.5625,0.4375,0.4375,0.3125
+2nd Order,0.59375,0.5,0.46875,0.5
+Raw,0.59375,0.46875,0.46875,0.40625
+Optimal,0.5625,0.46875,0.4375,0.40625

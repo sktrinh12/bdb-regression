@@ -18,8 +18,6 @@ library(nortest)
 library(ggpubr)
 
 source('global.R')
-example_file <- read.csv('stability_stats.csv')
-# source('omiq_regression.R')
 
 ui = tagList(
     # shinythemes::themeSelector(),
@@ -37,7 +35,7 @@ ui = tagList(
                                         '.csv')
                          )
                      ), 
-                     fluidRow(column(6,downloadButton("downloadData", "Download Stats Template")),
+                     fluidRow(column(6,downloadButton("download_template_file", "Download Stats Template")),
                               column(6,downloadButton("downloadExample", "Download Stats Example"))),
                      br(),
                      br(),
