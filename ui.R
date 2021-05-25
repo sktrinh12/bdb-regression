@@ -34,16 +34,22 @@ ui = tagList(
                                         'text/comma-separated-values',
                                         '.csv')
                          )
-                     ), 
+                     )), 
                      fluidRow(column(6,downloadButton("download_template_file", "Download Stats Template")),
                               column(6,downloadButton("downloadExample", "Download Stats Example"))),
                      br(),
                      br(),
-                     column(8, textAreaInput("model_system_data", "QC Model System Data", placeholder="This will be copied to the top right corner of every PPT slide.", height="100px")),
-                     column(4,radioButtons('pop_number', 'Cell Pop #', choices = c("P1", "P2", "P3"), inline = TRUE))),
-                     
-                     radioButtons('polynomial_order','Order of Polynomial', choices=c("Linear","2nd Order", "3rd Order"), selected="Linear", inline=TRUE),
-                     uiOutput('warning_ui_polynomial_choice'),
+                     fluidRow(
+                         column(8,textAreaInput("model_system_data","QC Model System Data",
+                             placeholder = "This will be copied to the top right corner of every PPT slide.",
+                             height = "100px")
+                             ),
+                         column(4,radioButtons('pop_number','Cell Pop #',
+                                 choices = c("P1", "P2", "P3"),
+                                 inline = TRUE)
+                     )), 
+                     fluidRow(column(12,radioButtons('polynomial_order','Order of Polynomial', choices=c("Linear","2nd Order", "3rd Order"), selected="Linear", inline=TRUE))),
+                     fluidRow(uiOutput('warning_ui_polynomial_choice')),
                      br(),
                      selectInput('CI', 'Confidence Interval', choices=c(0.85, 0.90, 0.95, 0.99), selected = 0.95),
                      textInput('threshold', '% of 4C Reference MFI Threshold', value=75),
