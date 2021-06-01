@@ -106,17 +106,20 @@ ui = tagList(
                                   wellPanel(h4(p(strong("Regression Analysis for Stability"))), 
                                             plotOutput("regression_plot_output", height = 350,
                                                        click = "regression_plot_output_click",
+                                                       dblclick = "regression_plot_zoom_dblclick",
                                                        brush = brushOpts(
-                                                           id = "regression_plot_output_brush"
+                                                           id = "regression_plot_output_brush",
+                                                           resetOnNew = TRUE
                                                        )
                                             ),
-                                            actionButton("exclude_reset", "Reset")
+                                            fluidRow(column(2,actionButton("exclude_reset", "Reset")),
+                                                     column(10,h6(p(strong(em("To zoom in, highlight box around area of interest and double click inside box. To reset zoom, double click any blank space inside plot area."))))
+                                                            ))
+
                                   ),
 
                                   fluidRow(column(
                                       6,wellPanel(
-                                      
-                                          
                                               h4(p(strong(
                                                   "Predicted Shelf-Life"
                                               ))),

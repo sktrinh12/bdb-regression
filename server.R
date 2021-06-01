@@ -310,9 +310,24 @@ server = function(input, output, session) {
         })
     
     ## Step 6: Create regression plot
+    add_zoom <- function(plot_id) {
+        ranges <- reactiveValues(x = NULL, y = NULL)
+        observeEvent(input[["regression_plot_zoom_dblclick"]], {
+            brush <- input[["regression_plot_output_brush"]]
+            if (!is.null(brush)) {
+                ranges$x <- c(brush$xmin, brush$xmax)
+                ranges$y <- c(brush$ymin, brush$ymax)
+            } else {
+                ranges$x <- NULL
+                ranges$y <- NULL
+            }
+        })
+        ranges
+    }
+    plot_range <- add_zoom("regression_plot_output")
+    
     regr_plot <- reactive({
         req(input$raw_upload)
-        # Plot the kept and excluded points as two separate data sets
         keep    <- selected_melted_data()[ vals$keeprows, , drop = FALSE]
         exclude <- selected_melted_data()[!vals$keeprows, , drop = FALSE]
         keep <- keep[complete.cases(keep),]
@@ -340,7 +355,8 @@ server = function(input, output, session) {
                                   formula = y ~ poly(x,poly_order(),raw=TRUE), method="lm", col="red",
                                   label.x.npc="center",label.y.npc="top",size=5) +
             theme(text=element_text(size = 14),
-                  legend.position = "bottom")
+                  legend.position = "bottom") +
+            coord_cartesian(xlim = plot_range$x, ylim = plot_range$y)
     })
     
     output$regression_plot_output <- renderPlot({ regr_plot() })
@@ -349,12 +365,6 @@ server = function(input, output, session) {
     observeEvent(input$regression_plot_output_click, {
         res <- nearPoints(selected_melted_data(), input$regression_plot_output_click, allRows = TRUE) 
         vals$keeprows <- xor(vals$keeprows, res$selected_) # keeprows array is updated 
-    })
-    
-    # Toggle points that are brushed, when button is clicked
-    observeEvent(input$exclude_toggle, {
-        res <- brushedPoints(selected_melted_data(), input$regression_plot_output_brush, allRows = TRUE)
-        vals$keeprows <- xor(vals$keeprows, res$selected_)
     })
     
     # Reset all points

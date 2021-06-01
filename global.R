@@ -108,7 +108,7 @@ concentrations_to_keep <- function(reference_MFI_data_wide, columns_to_include){
         df_selected <- c()
     }
     else{
-        df_selected <- dplyr::select(df, c(list_of_included_columns))
+        df_selected <- dplyr::select(df, all_of(list_of_included_columns))
     }
 
     concentrations_to_keep_df <- cbind('Time'=df$Time, df_selected)
