@@ -30,9 +30,8 @@ ui = tagList(
                      # fluidRow(column(7,selectizeInput('select_marker', 'Select Marker to Analyze', choices=NULL)),
                      #          column(5,div(uiOutput('marker_optimal'), style='padding-top:25px;'))),
                      fluidRow(column(12,fileInput("raw_upload","Choose raw stats file to upload",
-                             accept = c('text/csv',
-                                        'text/comma-separated-values',
-                                        '.csv')
+                             accept = c('text/xlsx',
+                                        '.xlsx')
                          )
                      )), 
                      fluidRow(column(6,downloadButton("download_template_file", "Download Stats Template")),

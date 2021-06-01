@@ -424,6 +424,7 @@ server = function(input, output, session) {
     poly_eval <- reactive({ polynomial_evaluation_of_linearity(keep(), poly_order()) })
     
     output$model_coeff_pvalue <- renderUI({ 
+        req(input$raw_upload)
         if( poly_eval()$b_pvalue >= 0.05 ){ ## Model coeff. not statistically significant
             div(style = "color: red; font-size: 20px;",
                 strong(format(round(poly_eval()$b_pvalue,3),nsmall=3)))
@@ -533,59 +534,40 @@ server = function(input, output, session) {
     
 
     ############################################ SUMMARY DATA FOR BULK ANALYSIS #############################################
-    wave_df <- reactive({ read_marker_data(wave_summary_file, sheet="Sheet1") })
-    
-    updateSelectizeInput(
-        session,
-        'select_marker',
-        choices = c(
-            read_marker_data(wave_summary_file, sheet = "Sheet1")$`Marker Description`
-        ),
-        server = TRUE
-    )
-    # updateSelectizeInput(
-    #     session,
-    #     'population_name',
-    #     choices = c(
-    #         "Lymph", "Mono", "Gran"
-    #     ),
-    #     server = TRUE, 
-    #     options = list(create=TRUE)
-    # )
-    optimal <- reactive({ wave_df()$`Optimal (ng/test)`[wave_df()$`Marker Description` == input$select_marker] })
-    output$marker_optimal <- renderUI({
-        tags$i(paste0('Optimal: ',optimal(), ' ng/test'),
-               style="color: #eb6864; font-size: 18px; font-style: normal; font-weight: bold; padding-top: 20px;"
-        )
-        
-    })
-    
-    raw_linear_results <- reactive({ results_summary(raw_melted_data(), 1, as.numeric(input$CI)) })
-    output$linear_results_output <- renderTable({ raw_linear_results() })
-    
-    optimal_linear_results <- reactive({ results_summary(optimal_data(), 1, as.numeric(input$CI)) })
-    output$optimal_linear_results_output <- renderTable({ optimal_linear_results() })
-    
-    raw_second_order_results <- reactive({ results_summary(raw_melted_data(), 2, as.numeric(input$CI)) })
-    output$second_order_results_output <- renderTable({ raw_second_order_results() })
-    
-    optimal_second_order_results <- reactive({ results_summary(optimal_data(), 2, as.numeric(input$CI)) })
-    output$optimal_second_order_results_output <- renderTable({ optimal_second_order_results() })
-    
-    optimal_data <- reactive({ melt_reference_mfi_table(concentrations_to_keep(raw_reference_MFI_data_wide_UI_only(), concentrations_around_optimal(optimal()))) })
-    
-    summary_table <- reactive({ req(input$raw_upload)
-        tibble(rbind(cbind('Concentrations Included'='Raw','Model Order'='Linear',raw_linear_results()),
-                     cbind('Concentrations Included'='Optimal +1/-2','Model Order'='Linear',optimal_linear_results()),
-                     cbind('Concentrations Included'='Raw','Model Order'='2nd Order',raw_second_order_results()),
-                     cbind('Concentrations Included'='Optimal +1/-2','Model Order'='2nd Order',optimal_second_order_results()))) })
-    
-    output$results_table <- renderTable({ summary_table() })
-    
-    
-    observeEvent(input$write_results, {
-        write_csv(summary_table(), 'summary_results_wave5.csv', append=TRUE) })
-    
+    # optimal <- reactive({ wave_df()$`Optimal (ng/test)`[wave_df()$`Marker Description` == input$select_marker] })
+    # output$marker_optimal <- renderUI({
+    #     tags$i(paste0('Optimal: ',optimal(), ' ng/test'),
+    #            style="color: #eb6864; font-size: 18px; font-style: normal; font-weight: bold; padding-top: 20px;"
+    #     )
+    #     
+    # })
+    # 
+    # raw_linear_results <- reactive({ results_summary(raw_melted_data(), 1, as.numeric(input$CI)) })
+    # output$linear_results_output <- renderTable({ raw_linear_results() })
+    # 
+    # optimal_linear_results <- reactive({ results_summary(optimal_data(), 1, as.numeric(input$CI)) })
+    # output$optimal_linear_results_output <- renderTable({ optimal_linear_results() })
+    # 
+    # raw_second_order_results <- reactive({ results_summary(raw_melted_data(), 2, as.numeric(input$CI)) })
+    # output$second_order_results_output <- renderTable({ raw_second_order_results() })
+    # 
+    # optimal_second_order_results <- reactive({ results_summary(optimal_data(), 2, as.numeric(input$CI)) })
+    # output$optimal_second_order_results_output <- renderTable({ optimal_second_order_results() })
+    # 
+    # optimal_data <- reactive({ melt_reference_mfi_table(concentrations_to_keep(raw_reference_MFI_data_wide_UI_only(), concentrations_around_optimal(optimal()))) })
+    # 
+    # summary_table <- reactive({ req(input$raw_upload)
+    #     tibble(rbind(cbind('Concentrations Included'='Raw','Model Order'='Linear',raw_linear_results()),
+    #                  cbind('Concentrations Included'='Optimal +1/-2','Model Order'='Linear',optimal_linear_results()),
+    #                  cbind('Concentrations Included'='Raw','Model Order'='2nd Order',raw_second_order_results()),
+    #                  cbind('Concentrations Included'='Optimal +1/-2','Model Order'='2nd Order',optimal_second_order_results()))) })
+    # 
+    # output$results_table <- renderTable({ summary_table() })
+    # 
+    # 
+    # observeEvent(input$write_results, {
+    #     write_csv(summary_table(), 'summary_results_wave5.csv', append=TRUE) })
+    # 
     
 
     
