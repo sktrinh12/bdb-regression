@@ -7,6 +7,7 @@ ui_font_size <- 16
 ui_data_point_size <- 7
 reports_font_size <- 12
 reports_data_point_size <- 4
+fontname <- "Arial"
 
 server = function(input, output, session) {
     
@@ -795,7 +796,8 @@ server = function(input, output, session) {
                         align(align="center", part="all")  %>%
                         # fontsize(size = 14, part = "body") %>%
                         fontsize(size = 11, part = "all") %>%
-                        hline_top(part = "all", border = fp_border(color="black", width=2)),
+                        hline_top(part = "all", border = fp_border(color="black", width=2)) %>%
+                        font(fontname = fontname, part = "all"),
                     location = ph_location_type(type = "body", position_right = F, position_top = T)
                 ) %>%
                 ph_with(
@@ -809,7 +811,8 @@ server = function(input, output, session) {
                         align(align="center", part="all") %>%
                         fontsize(size = 14, part = "body") %>%
                         color(i = 1, j = 4, color = raw_model_pvalue_color()) %>%
-                        hline_top(part = "all", border = fp_border(color="black", width=2)),
+                        hline_top(part = "all", border = fp_border(color="black", width=2)) %>%
+                        font(fontname = fontname, part = "all"),
                     location = ph_location_type(type = "body", position_right = F, position_top = F)
                 ) %>%
                 ph_with(
@@ -850,7 +853,8 @@ server = function(input, output, session) {
                         align(align="center", part="all") %>%
                         fontsize(size = 12, part = "header") %>%
                         color(i = 1, j = 1, color = raw_ad_pvalue_color()) %>%
-                        fontsize(size = 16, part = "body"),
+                        fontsize(size = 16, part = "body") %>%
+                        font(fontname = fontname, part = "all"),
                     location = ph_location_type(type = "body", left = 7, index = 3, position_right = T)
                 ) %>%
                 ph_with(
@@ -869,7 +873,8 @@ server = function(input, output, session) {
                         bold(i = 1:2, bold = TRUE, part = "header") %>%
                         align(align="center", part="all")  %>%
                         fontsize(size = 11, part = "all") %>%
-                        hline_top(part = "all", border = fp_border(color="black", width=2)),
+                        hline_top(part = "all", border = fp_border(color="black", width=2)) %>%
+                        font(fontname = fontname, part = "all"),
                     location = ph_location_type(type = "body", position_right = F, position_top = T)
                 ) %>%
                 ph_with(
@@ -883,7 +888,8 @@ server = function(input, output, session) {
                         align(align="center", part="all") %>%
                         fontsize(size = 14, part = "body") %>%
                         color(i = 1, j = 4, color = modified_model_pvalue_color()) %>%
-                        hline_top(part = "all", border = fp_border(color="black", width=2)),
+                        hline_top(part = "all", border = fp_border(color="black", width=2)) %>%
+                        font(fontname = fontname, part = "all"),
                     location = ph_location_type(type = "body", position_right = F, position_top = F)
                 ) %>%
                 ph_with(
@@ -928,7 +934,8 @@ server = function(input, output, session) {
                         align(align="center", part="all") %>%
                         fontsize(size = 12, part = "header") %>%
                         color(i = 1, j = 1, color = modified_ad_pvalue_color()) %>%
-                        fontsize(size = 16, part = "body"),
+                        fontsize(size = 16, part = "body") %>%
+                        font(fontname = fontname, part = "all"),
                     location = ph_location_type(type = "body", left = 7, index = 3, position_right = T)
                 ) %>%
                 ph_with(
