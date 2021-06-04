@@ -2,6 +2,12 @@ source('global.R')
 wave_summary_file <- "wave5_summary.xlsx"
 mypptx <- read_pptx("bd_template_homemade.pptx")
 
+## CONSTANTS
+ui_font_size <- 16
+ui_data_point_size <- 7
+reports_font_size <- 12
+reports_data_point_size <- 4
+
 server = function(input, output, session) {
     
     ########################## TEMPLATE DATA ##########################
@@ -121,34 +127,19 @@ server = function(input, output, session) {
         })
     
     ## Step 7: Create regression plot
+    
     raw_regr_plot <- reactive({
         
         req(input$raw_upload)
         
-        ggplot(raw_melted_data(), aes(x=Time, y=value, color=Concentrations)) + 
-            geom_ribbon(data=raw_melted_data(), 
-                        aes(x=Time, y=value, 
-                            ymin=raw_confidence_bands()[[2]], 
-                            ymax=raw_confidence_bands()[[4]]), 
-                        formula = y ~ poly(x,poly_order(), raw=TRUE), method="lm",col = "red", 
-                        level=as.numeric(confidenceInterval()), alpha=0.2) +
-            geom_line(data=raw_confidence_bands(), 
-                      aes(x=raw_confidence_bands()[[1]], y=raw_confidence_bands()[[3]]), 
-                      formula = y ~ poly(x,poly_order(), raw=TRUE), method="lm", col = "red") +
-            geom_point(size=7) + 
-            labs(x = "Time (years)",
-                 y = "% of 4C Reference MFI") +
-            theme_minimal() +
-            scale_color_brewer(palette = 'Dark2', na.translate = F,
-                               labels = unique(raw_melted_data()$Labels)) +
-            stat_regline_equation(data=raw_melted_data(), 
-                                  aes(x=Time, y=value,
-                                      label=paste(..eq.label.., ..rr.label.., sep = "~~~~~~")), 
-                                  formula = y ~ poly(x,poly_order(),raw=TRUE), method="lm", col="red",
-                                  label.x.npc="center",label.y.npc="top",size=5) +
-            theme(text=element_text(size = 14),
-                  legend.position = "bottom")
-        
+        regression_plot_global(
+            ui_font_size,
+            ui_data_point_size,
+            raw_melted_data(),
+            raw_confidence_bands(),
+            poly_order(),
+            confidenceInterval()
+        )
     })
     
     ## Step 8: Calculate shelf life with and without confidence interval
@@ -332,31 +323,20 @@ server = function(input, output, session) {
         exclude <- selected_melted_data()[!vals$keeprows, , drop = FALSE]
         keep <- keep[complete.cases(keep),]
         
-        ggplot(keep, aes(x=Time, y=value, color=Concentrations)) + 
-            geom_ribbon(data=keep, 
-                        aes(x=Time, y=value, 
-                            ymin=confidence_bands()[[2]], 
-                            ymax=confidence_bands()[[4]]), 
-                        formula = y ~ poly(x,poly_order(), raw=TRUE), 
-                        method="lm", col = "red", level=as.numeric(confidenceInterval()), alpha=0.2) +
-            geom_line(data=confidence_bands(), 
-                      aes(x=confidence_bands()[[1]], 
-                          y=confidence_bands()[[3]]), 
-                      formula = y ~ poly(x,poly_order(), raw=TRUE), method="lm", col = "red") +
-            geom_point(size=7) + # plot with keep dataset points filled in only
-            geom_point(data = exclude, size = 7, shape = 21, fill = NA, color = 'black') +
-            labs(x = "Time (years)",
-                 y = "% of 4C Reference MFI") +
-            theme_minimal() +
-            scale_color_brewer(palette = 'Dark2', na.translate = F,
-                               labels = unique(keep$Labels)) +
-            stat_regline_equation(data=keep, 
-                                  aes(x=Time, y=value,label=paste(..eq.label.., ..rr.label.., sep = "~~~~~~")), 
-                                  formula = y ~ poly(x,poly_order(),raw=TRUE), method="lm", col="red",
-                                  label.x.npc="center",label.y.npc="top",size=5) +
-            theme(text=element_text(size = 14),
-                  legend.position = "bottom") +
+        
+        p <- regression_plot_global(
+            ui_font_size,
+            ui_data_point_size,
+            keep,
+            confidence_bands(),
+            poly_order(),
+            confidenceInterval()
+        )
+        p <- p + geom_point(data = exclude, size = ui_data_point_size, shape = 21, fill = NA, color = 'black') +
             coord_cartesian(xlim = plot_range$x, ylim = plot_range$y)
+            
+        return(p)
+       
     })
     
     output$regression_plot_output <- renderPlot({ regr_plot() })
@@ -425,15 +405,39 @@ server = function(input, output, session) {
     
     output$model_coeff_pvalue <- renderUI({ 
         req(input$raw_upload)
-        if( poly_eval()$b_pvalue >= 0.05 ){ ## Model coeff. not statistically significant
-            div(style = "color: red; font-size: 20px;",
-                strong(format(round(poly_eval()$b_pvalue,3),nsmall=3)))
+        if(poly_order() == 1){
+            
+            if( poly_eval()$b_pvalue >= 0.05 ){ ## Model coeff. not statistically significant
+                div(style = "color: red; font-size: 20px;",
+                    strong(format(round(poly_eval()$b_pvalue,3),nsmall=3)))
+            }
+            else if( poly_eval()$b_pvalue < 0.05 ){ # Model coeff. is statistically significant
+                div(style = "color: #2DC62D; font-size: 20px",
+                    strong(format(round(poly_eval()$b_pvalue,3),nsmall=3)))
+            }
         }
-        else if( poly_eval()$b_pvalue < 0.05 ){ # Model coeff. is statistically significant
-            div(style = "color: #2DC62D; font-size: 20px",
-                strong(format(round(poly_eval()$b_pvalue,3),nsmall=3)))
+        else if(poly_order() == 2){
+            
+            if( poly_eval()$c_pvalue >= 0.05 ){ ## Model coeff. not statistically significant
+                div(style = "color: red; font-size: 20px;",
+                    strong(format(round(poly_eval()$c_pvalue,3),nsmall=3)))
+            }
+            else if( poly_eval()$c_pvalue < 0.05 ){ # Model coeff. is statistically significant
+                div(style = "color: #2DC62D; font-size: 20px",
+                    strong(format(round(poly_eval()$c_pvalue,3),nsmall=3)))
+            }
         }
-        # format(round(poly_eval()$b_pvalue,2), nsmall = 3) 
+        else if(poly_order() == 3){
+            
+            if( poly_eval()$d_pvalue >= 0.05 ){ ## Model coeff. not statistically significant
+                div(style = "color: red; font-size: 20px;",
+                    strong(format(round(poly_eval()$d_pvalue,3),nsmall=3)))
+            }
+            else if( poly_eval()$d_pvalue < 0.05 ){ # Model coeff. is statistically significant
+                div(style = "color: #2DC62D; font-size: 20px",
+                    strong(format(round(poly_eval()$d_pvalue,3),nsmall=3)))
+            }
+        }
     })
     
     output$warning_ui_model_coeff_pvalue <- renderUI({
@@ -469,10 +473,18 @@ server = function(input, output, session) {
     normal_probability_plot_expr <- reactive({ normal_probability_plot(keep(), poly_order(), residuals_expr()) })
     anderson_darling_normality_test_pvalue <- reactive({ anderson_darling_normality_test(residuals_expr()) })
 
-    output$normal_prob_plot_output <- renderPlotly({ normal_probability_plot_expr() })
-    output$anderson_darling_pvalue_table_output <- renderTable({ modified_anderson_darling_flextable() })
+    output$normal_prob_plot_output <- renderPlotly({
+        req(input$raw_upload) 
+        normal_probability_plot_expr()
+    })
+    
+    output$anderson_darling_pvalue_table_output <- renderTable({
+        req(input$raw_upload) 
+        modified_anderson_darling_flextable()
+    })
     
     output$anderson_darling_pvalue_output <- renderUI({
+        req(input$raw_upload)
         
         if( anderson_darling_normality_test_pvalue() < 0.05 ){ ## Not Normal Distribution
             div(style = "color: red; font-size: 20px;",
@@ -542,16 +554,16 @@ server = function(input, output, session) {
     #     
     # })
     # 
-    # raw_linear_results <- reactive({ results_summary(raw_melted_data(), 1, as.numeric(input$CI)) })
+    # raw_linear_results <- reactive({ results_summary(raw_melted_data(), 1, as.numeric(confidenceInterval())) })
     # output$linear_results_output <- renderTable({ raw_linear_results() })
     # 
-    # optimal_linear_results <- reactive({ results_summary(optimal_data(), 1, as.numeric(input$CI)) })
+    # optimal_linear_results <- reactive({ results_summary(optimal_data(), 1, as.numeric(confidenceInterval())) })
     # output$optimal_linear_results_output <- renderTable({ optimal_linear_results() })
     # 
-    # raw_second_order_results <- reactive({ results_summary(raw_melted_data(), 2, as.numeric(input$CI)) })
+    # raw_second_order_results <- reactive({ results_summary(raw_melted_data(), 2, as.numeric(confidenceInterval())) })
     # output$second_order_results_output <- renderTable({ raw_second_order_results() })
     # 
-    # optimal_second_order_results <- reactive({ results_summary(optimal_data(), 2, as.numeric(input$CI)) })
+    # optimal_second_order_results <- reactive({ results_summary(optimal_data(), 2, as.numeric(confidenceInterval())) })
     # output$optimal_second_order_results_output <- renderTable({ optimal_second_order_results() })
     # 
     # optimal_data <- reactive({ melt_reference_mfi_table(concentrations_to_keep(raw_reference_MFI_data_wide_UI_only(), concentrations_around_optimal(optimal()))) })
@@ -578,18 +590,44 @@ server = function(input, output, session) {
     ############################################ FLEXTABLES FOR REPORTS #############################################
     
     raw_shelf_life_summary_flextable <- reactive({ 
-        df <- tibble("Shelf-Life (days)" = c(round(solve_for_lower_shelf_life(raw_melted_data(), poly_order(), 0.95, 75),1)*365),
-                     "Shelf-Life (years)" = c(round(solve_for_lower_shelf_life(raw_melted_data(), poly_order(), 0.95, 75),1)),
-                     "R-squared" = c(raw_R_sq_val()),
-                     "Model p-value"=c(format(round(raw_poly_eval()$b_pvalue,3), nsmall = 3))
+        df <- tibble(
+            "Shelf-Life (days)" = c(round(
+                solve_for_lower_shelf_life(
+                    raw_melted_data(), 
+                    poly_order(), 
+                    as.numeric(confidenceInterval()),  
+                    as.numeric(threshold_y())),
+                1)*365),
+             "Shelf-Life (years)" = c(round(
+                 solve_for_lower_shelf_life(
+                     raw_melted_data(),
+                     poly_order(), 
+                     as.numeric(confidenceInterval()),  
+                     as.numeric(threshold_y())),
+                 1)),
+             "R-squared" = c(raw_R_sq_val()),
+             "Model p-value"=c(format(round(raw_poly_eval()$b_pvalue,3), nsmall = 3))
         )
     })
     
     modified_shelf_life_summary_flextable <- reactive({ 
-        df <- tibble("Shelf-Life (days)" = c(round(solve_for_lower_shelf_life(keep(), poly_order(), 0.95, 75),1)*365),
-                     "Shelf-Life (years)" = c(round(solve_for_lower_shelf_life(keep(), poly_order(), 0.95, 75),1)),
-                     "R-squared" = c(format(round(R_sq_val(),2),nsmall=2)),
-                     "Model p-value"=c(format(round(poly_eval()$b_pvalue,3), nsmall = 3))
+        df <- tibble(
+            "Shelf-Life (days)" = c(round(
+                solve_for_lower_shelf_life(
+                    keep(), 
+                    poly_order(), 
+                    as.numeric(confidenceInterval()), 
+                    as.numeric(threshold_y())),
+                1)*365),
+             "Shelf-Life (years)" = c(round(
+                 solve_for_lower_shelf_life(
+                     keep(), 
+                     poly_order(), 
+                     as.numeric(confidenceInterval()), 
+                     as.numeric(threshold_y())),
+                 1)),
+             "R-squared" = c(format(round(R_sq_val(),2),nsmall=2)),
+             "Model p-value"=c(format(round(poly_eval()$b_pvalue,3), nsmall = 3))
         )
     })
 
@@ -647,65 +685,46 @@ server = function(input, output, session) {
         }
     })
     
-    ################## R Markdown Report ######################
-    output$report <- downloadHandler(
+    ## Plots for PPT presentation
+    raw_regression_plot_for_report <- reactive({ 
         
-        # For PDF output, change this to "report.pdf"
-        filename = "report.pdf",
-        content = function(file) {
-            # Copy the report file to a temporary directory before processing it, in
-            # case we don't have write permissions to the current working dir (which
-            # can happen when deployed).
-            tempReport <- file.path(tempdir(), "report.Rmd")
-            file.copy("report.Rmd", tempReport, overwrite = TRUE)
-            
-            # Set up parameters to pass to Rmd document
-            params <- list(CI = input$CI,
-                           threshold = input$threshold,
-                           order = input$polynomial_order,
-                           fullDT = reference_MFI_data_to_include(),
-                           raw_upload_data = raw_upload_data(),
-                           raw_full_data = raw_reference_MFI_data_wide_UI_only(),
-                           meltedDT = selected_melted_data(),
-                           raw_melted_data = raw_melted_data(),
-                           shelf_life = paste0(
-                               round(shelf_life(),2),
-                               ' years (', 
-                               round(shelf_life()*365,0), 
-                               ' days)' ),
-                           shelf_life_lower = paste0(
-                               round(lower_shelf_life(),2),
-                               ' years (',
-                               round(lower_shelf_life()*365,0),
-                               ' days)'),
-                           notes = input$notes,
-                           author = input$author,
-                           raw_data = req(input$raw_upload),
-                           confidence_bands = confidence_bands(),
-                           raw_confidence_bands = raw_confidence_bands(),
-                           poly_order = poly_order(),
-                           raw_shelf_life = paste0(
-                                                   round(raw_shelf_life(),2),
-                                                   ' years (', 
-                                                   round(raw_shelf_life()*365,0), 
-                                                   ' days)' ),
-                           raw_lower_shelf_life = paste0(
-                               round(raw_lower_shelf_life(),2),
-                               ' years (',
-                               round(raw_lower_shelf_life()*365,0),
-                               ' days)'),
-                           keep = keep(),
-                           exclude = exclude()
-            )
-            
-            rmarkdown::render(tempReport, output_format = "pdf_document", output_file = file,
-                              params = params,
-                              envir = new.env(parent = globalenv())
-            )
-            
-        }
-    )
+        req(input$raw_upload)
+        
+        regression_plot_global(
+            reports_font_size,
+            reports_data_point_size,
+            raw_melted_data(),
+            raw_confidence_bands(),
+            poly_order(),
+            confidenceInterval()
+        )
 
+        })
+    
+    modified_regression_plot_for_report <- reactive({
+        
+        req(input$raw_upload)
+        keep    <- selected_melted_data()[ vals$keeprows, , drop = FALSE]
+        exclude <- selected_melted_data()[!vals$keeprows, , drop = FALSE]
+        keep <- keep[complete.cases(keep),]
+        
+        
+        p <- regression_plot_global(
+            reports_font_size,
+            reports_data_point_size,
+            keep,
+            confidence_bands(),
+            poly_order(),
+            confidenceInterval()
+        )
+        p <- p + geom_point(data = exclude, size = reports_data_point_size, shape = 21, fill = NA, color = 'black') +
+            coord_cartesian(xlim = plot_range$x, ylim = plot_range$y) 
+        
+        return(p)
+        
+    })
+    
+    ## Text formatting for PPT presentation
     label_fp <- fp_text(bold = TRUE, color = "black", font.size = 16)
     note_fp <- fp_text(bold = FALSE, color = "black", font.size = 16)
     notes_reactive <- reactive({
@@ -747,6 +766,10 @@ server = function(input, output, session) {
                     ph_with(
                         value = paste0(input$pop_number, ":  Histogram Plots"),
                         location = ph_location_type(type = "title")
+                ) %>%
+                ph_with(
+                    value = cell_pops(),
+                    location = ph_location_template(left=11, top=0, width=3, height=1, newlabel="new", id=6)
                 ) %>%
                 ################### MFI PLOTS SLIDE ##################
                 add_slide(layout = "Two Content", master = "Office Theme") %>%
@@ -819,7 +842,7 @@ server = function(input, output, session) {
                     location = ph_location_type(type = "body", position_right = F, position_top = T)
                 ) %>%
                 ph_with(
-                    value = raw_regr_plot(), 
+                    value = raw_regression_plot_for_report(), 
                     location = ph_location_type(type = "pic")
                 ) %>%
                 ph_with(
@@ -893,7 +916,7 @@ server = function(input, output, session) {
                     location = ph_location_type(type = "body", position_right = F, position_top = T)
                 ) %>%
                 ph_with(
-                    value = regr_plot(),
+                    value = modified_regression_plot_for_report(),
                     location = ph_location_type(type = "pic")
                 ) %>%
                 ph_with(

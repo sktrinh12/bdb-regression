@@ -27,15 +27,15 @@ ui = tagList(
         tabPanel("",
                  sidebarPanel(
                      includeHTML("analytics.html"),
-                     # fluidRow(column(7,selectizeInput('select_marker', 'Select Marker to Analyze', choices=NULL)),
-                     #          column(5,div(uiOutput('marker_optimal'), style='padding-top:25px;'))),
+                     div(style = " overflow-x: scroll;",
                      fluidRow(column(12,fileInput("raw_upload","Choose raw stats file to upload",
                              accept = c('text/xlsx',
                                         '.xlsx')
                          )
                      )), 
-                     fluidRow(column(6,downloadButton("download_template_file", "Download Stats Template")),
-                              column(6,downloadButton("downloadExample", "Download Stats Example"))),
+                     div(style = "display: grid; grid-template-columns: 250px 200px; padding-right: 5px",
+                         column(6,downloadButton("download_template_file", "Download Stats Template")),
+                         column(6,downloadButton("downloadExample", "Download Stats Example"))),
                      br(),
                      br(),
                      fluidRow(
@@ -54,30 +54,9 @@ ui = tagList(
                      textInput('threshold', '% of 4C Reference MFI Threshold', value=75),
                      uiOutput('concentration_checkGroupInput'),
                      br(),
-                     br(),
-                     # checkboxGroupInput('conc_avgs', 'Regression Concentrations', choices = c(
-                     #     '15 ng/test' = 2,
-                     #     '30 ng/test' = 3,
-                     #     '60 ng/test' = 4,
-                     #     '125 ng/test' = 5,
-                     #     '250 ng/test' = 6,
-                     #     '500 ng/test' = 7,
-                     #     '1000 ng/test' = 8,
-                     #     '2000 ng/test' = 9
-                     # ),
-                     #     selected = c(
-                     #     '15 ng/test' = 2,
-                     #     '30 ng/test' = 3,
-                     #     '60 ng/test' = 4,
-                     #     '125 ng/test' = 5,
-                     #     '250 ng/test' = 6,
-                     #     '500 ng/test' = 7,
-                     #     '1000 ng/test' = 8,
-                     #     '2000 ng/test' = 9
-                     # )),
-                     # actionButton("write_results", "Save Summary Results to CSV", class = "btn-secondary"),
-                     # downloadButton("report", "Generate report", class = "btn-primary"),
-                     downloadButton("pptx_id", "Download PPT", class = "btn-primary")
+                     downloadButton("pptx_id", "Download PPT", class = "btn-primary"),
+                     br()
+                     )
                  ),
                  mainPanel(
                      tabsetPanel(

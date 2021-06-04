@@ -21,6 +21,34 @@ template_data <- tibble('Time'=c(0,0.5,1,1.5,2,3,4,5),
                             'Conc_2000_ng'=rep(NA, 8)
 )
 
+regression_plot_global <- function(text_size, data_point_size, df, confidence_bands, order, CI){
+    ggplot(df, aes(x=Time, y=value, color=Concentrations)) + 
+        geom_ribbon(data=df, 
+                    aes(x=Time, y=value, 
+                        ymin=confidence_bands[[2]], 
+                        ymax=confidence_bands[[4]]), 
+                    formula = y ~ poly(x,order, raw=TRUE), method="lm",col = "red", 
+                    level=as.numeric(CI), alpha=0.2) +
+        geom_line(data=confidence_bands, 
+                  aes(x=confidence_bands[[1]], y=confidence_bands[[3]]), 
+                  formula = y ~ poly(x,order, raw=TRUE), method="lm", col = "red") +
+        geom_point(size=data_point_size) + 
+        labs(x = "Time (years)",
+             y = "% of 4C Reference MFI") +
+        theme_minimal() +
+        scale_color_brewer(palette = 'Dark2', na.translate = F,
+                           labels = unique(df$Labels)) +
+        stat_regline_equation(data=df, 
+                              aes(x=Time, y=value,
+                                  label=paste(..eq.label.., ..rr.label.., sep = "~~~~~~")), 
+                              formula = y ~ poly(x,order,raw=TRUE), method="lm", col="red",
+                              label.x.npc="center",label.y.npc="top",size=5) +
+        theme(text=element_text(size = text_size),
+              legend.position = "bottom")
+}
+
+# raw_regression_plot_UI <- regression_plot_global(14, 5, raw_melted_data(), raw_confidence_bands(), poly_order(), confidenceInterval())
+
 ## Calculate the % of 4C Reference MFI data from the uploaded stats
 calculate_perct_4C_MFI <- function(df){
     

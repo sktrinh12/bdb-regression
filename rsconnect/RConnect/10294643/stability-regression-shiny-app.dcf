@@ -5,9 +5,9 @@ account: 10294643
 server: RConnect
 hostUrl: https://bdstattools.bdx.com:3939/__api__
 appId: 88
-bundleId: 820
+bundleId: 822
 url: https://bdstattools.bdx.com:3939/bdb-stability-regression-shiny-app/
-when: 1622565508.39673
+when: 1622566251.28513
 asMultiple: FALSE
 asStatic: FALSE
 ignoredFiles: confidenceIntervals.R|stability_raw_opt_analysis.R|wave5_summary.xlsx
