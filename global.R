@@ -47,11 +47,26 @@ regression_plot_global <- function(text_size, data_point_size, df, confidence_ba
               legend.position = "bottom")
 }
 
-# raw_regression_plot_UI <- regression_plot_global(14, 5, raw_melted_data(), raw_confidence_bands(), poly_order(), confidenceInterval())
+## Create concentration choice names for UI selection (based on file input)
+concentration_choiceNames <- function(df){
+    list_of_concentrations <- unique(df$Concentration)
+    choiceNames <- c()
+    for(i in list_of_concentrations){
+        name <- paste(i, "ng/test")
+        choiceNames <- append(choiceNames, name)
+    }
+    return(choiceNames)
+}
+
+## Create concentration choice values for UI selection (based on choice names)
+concentration_choiceValues <- function(choiceNames){
+    choiceValues <- c(1:length(choiceNames)+1)
+    return(choiceValues)
+}
 
 ## Calculate the % of 4C Reference MFI data from the uploaded stats
 calculate_perct_4C_MFI <- function(df){
-    
+
     calc_vect <- c() # Initialize % of 4C MFI data
     for(i in unique(df$Concentration)){
         for(row in c(1:nrow(df[df$Concentration == i,]))){
@@ -68,7 +83,6 @@ calculate_perct_4C_MFI <- function(df){
 
 ## FOR UI USE ONLY
 ## Convert the reference MFI table to a wide table, each column designated to each concentration
-## If 15 ng/test isn't included, will add to the table, but automatically toggle off of UI. 
 create_reference_MFI_table_wide_UI_only <- function(df){
     
     # Take only subset of raw stats table
@@ -80,12 +94,6 @@ create_reference_MFI_table_wide_UI_only <- function(df){
         colnames(df_wide)[i] <- paste0(colnames(df_wide)[i], " ng/test")
     }
 
-    if("15 ng/test" %in% colnames(df_wide)){
-        return(df_wide)
-    }
-    else{
-        df_wide <- add_column(df_wide, "15 ng/test" = c(NA), .after="Time")
-    }
     return(df_wide)
 }
 
@@ -174,14 +182,12 @@ concentrations_around_optimal <- function(optimal){
 }
 
 melt_reference_mfi_table <- function(df_full=template_data){
-    
     # Melt Columns by Time
     dataMelt <- melt(df_full, "Time", variable='Concentrations')
-
     dataMelt <- cbind(dataMelt, 'Labels'=paste0(parse_number(as.character(dataMelt$Concentrations)), ' ng/test'))
+
     # print('dataMelt: ')
 
-    
     return (dataMelt)
 }
 # dotPlotData <- melt_reference_mfi_table(fullDataTable(reference_MFI_data_wide))

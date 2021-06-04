@@ -188,63 +188,20 @@ server = function(input, output, session) {
     ## Step 3: Gather concentrations to analyze
     
     ## Step 3a: Create list of selected concentrations to include in analysis
+    
+    concentration_choice_names <- reactive({ concentration_choiceNames(raw_upload_data()) })
+    concentration_choice_values <- reactive({ concentration_choiceValues(concentration_choice_names()) })
+    
     output$concentration_checkGroupInput <-
         renderUI({
-            # if there is no 15 ng/test concentration is found in stats, default to toggle off
-            if ( all(is.na(raw_reference_MFI_data_wide_UI_only()$Conc_15_ng)) ) {
+            req(input$raw_upload)
                 checkboxGroupInput(
                     'concentrations_to_include',
                     'Regression Concentrations',
-                    choices = c(
-                        '15 ng/test' = 2,
-                        '30 ng/test' = 3,
-                        '60 ng/test' = 4,
-                        '125 ng/test' = 5,
-                        '250 ng/test' = 6,
-                        '500 ng/test' = 7,
-                        '1000 ng/test' = 8,
-                        '2000 ng/test' = 9
-                    ),
-                    selected = c(
-                        # '15 ng/test' = 2,
-                        '30 ng/test' = 3,
-                        '60 ng/test' = 4,
-                        '125 ng/test' = 5,
-                        '250 ng/test' = 6,
-                        '500 ng/test' = 7,
-                        '1000 ng/test' = 8,
-                        '2000 ng/test' = 9
-                    )
+                    choiceNames = c(concentration_choice_names()),
+                    choiceValues = c(concentration_choice_values()),
+                    selected = c(concentration_choice_values())
                 )
-            }
-            # else, default to toggle 15 ng/test on
-            else{
-                checkboxGroupInput(
-                    'concentrations_to_include',
-                    'Regression Concentrations',
-                    choices = c(
-                        '15 ng/test' = 2,
-                        '30 ng/test' = 3,
-                        '60 ng/test' = 4,
-                        '125 ng/test' = 5,
-                        '250 ng/test' = 6,
-                        '500 ng/test' = 7,
-                        '1000 ng/test' = 8,
-                        '2000 ng/test' = 9
-                    ),
-                    selected = c(
-                        '15 ng/test' = 2,
-                        '30 ng/test' = 3,
-                        '60 ng/test' = 4,
-                        '125 ng/test' = 5,
-                        '250 ng/test' = 6,
-                        '500 ng/test' = 7,
-                        '1000 ng/test' = 8,
-                        '2000 ng/test' = 9
-                    )
-                )
-            }
-            
         })
     
     concentrations_to_include_list <- reactive({ 
