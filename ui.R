@@ -28,6 +28,7 @@ ui = tagList(
                  sidebarPanel(
                      includeHTML("analytics.html"),
                      div(style = " overflow-x: scroll;",
+                         
                      fluidRow(column(12,fileInput("raw_upload","Choose raw stats file to upload",
                              accept = c('text/xlsx',
                                         '.xlsx')
@@ -54,7 +55,10 @@ ui = tagList(
                      textInput('threshold', '% of 4C Reference MFI Threshold', value=75),
                      uiOutput('concentration_checkGroupInput'),
                      br(),
-                     downloadButton("pptx_id", "Download PPT", class = "btn-primary"),
+                     div(style = "display: grid; grid-template-columns: 250px 250px; padding: 5px;",
+                         div(textInput("filename_output", "Name Final PPT", placeholder = "Exclude .pptx")),
+                         div(style = "display: flex; align-items: center; justify-content: center; padding-top: 10px", 
+                            downloadButton("pptx_id", "Download PPT", class = "btn-primary"))),
                      br()
                      )
                  ),

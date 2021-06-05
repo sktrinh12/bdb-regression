@@ -9,7 +9,7 @@ reports_font_size <- 12
 reports_data_point_size <- 4
 fontname <- "Arial"
 
-server = function(input, output, session) {
+server = function(input, output) {
     
     ########################## TEMPLATE DATA ##########################
     template_data <- tibble('Time'=c(0,0.5,1,1.5,2,3,4,5), 
@@ -648,15 +648,16 @@ server = function(input, output, session) {
         
         req(input$raw_upload)
         
-        regression_plot_global(
-            reports_font_size,
-            reports_data_point_size,
-            raw_melted_data(),
-            raw_confidence_bands(),
-            poly_order(),
-            confidenceInterval()
-        )
+        p <- regression_plot_global(
+                reports_font_size,
+                reports_data_point_size,
+                raw_melted_data(),
+                raw_confidence_bands(),
+                poly_order(),
+                confidenceInterval()
+        ) + coord_cartesian(ylim = c(0,100))
 
+        return(p)
         })
     
     modified_regression_plot_for_report <- reactive({
@@ -676,7 +677,7 @@ server = function(input, output, session) {
             confidenceInterval()
         )
         p <- p + geom_point(data = exclude, size = reports_data_point_size, shape = 21, fill = NA, color = 'black') +
-            coord_cartesian(xlim = plot_range$x, ylim = plot_range$y) 
+            coord_cartesian(ylim = c(0,100)) 
         
         return(p)
         
@@ -697,12 +698,12 @@ server = function(input, output, session) {
             ))
         ))
     })
-    
+    final_name <- reactive({ as.character(paste0(input$filename_output, ".pptx")) })
     ######################## RESIDUAL PLOTS ###################################
     ########################## Powerpoint Output ##############################
     output$pptx_id <- downloadHandler(
         filename = function(){
-            "test_pptx2.pptx"
+            final_name()
         },
         content = function(file){
             
@@ -942,7 +943,6 @@ server = function(input, output, session) {
                     value = cell_pops(),
                     location = ph_location_template(left=11, top=0, width=3, height=1, newlabel="new", id=6)
                 ) %>%
-            
                 print(target = file)
         }
     )
