@@ -160,6 +160,10 @@ server = function(input, output) {
                 as.numeric(threshold_y())
             )
         })
+    
+    rounded_raw_lower_shelf_life <- reactive({
+        rounded_shelf_life(raw_lower_shelf_life())
+    })
 
     ## Step 8: Quality checks: model coefficient p-value & R-squared value
     
@@ -326,6 +330,10 @@ server = function(input, output) {
             )
         })
     
+    rounded_modified_lower_shelf_life <- reactive({
+        rounded_shelf_life(lower_shelf_life())
+    })
+    
     ## Step 7b: Output shelf-life to UI
     output$check_shelf_life <- renderUI({
         req(input$raw_upload)
@@ -336,7 +344,8 @@ server = function(input, output) {
             )
         }
         else{
-            tags$i(paste0(round(shelf_life(),2), ' years   ', '(', round(as.numeric(shelf_life())*365,0), ' days)'),
+            tags$i(paste0(round(lower_shelf_life(),2), ' years   ', '(', 
+                          round(as.numeric(lower_shelf_life())*365,0), ' days)'),
                    style="color: #eb6864; font-size: 20px; font-style: normal; font-weight: bold;"
             )
         }
@@ -350,7 +359,8 @@ server = function(input, output) {
             )
         }
         else{
-            tags$i(paste0(round(lower_shelf_life(),2), ' years   ', '(', round(as.numeric(lower_shelf_life())*365,0), ' days)'),
+            tags$i(paste0(round(rounded_modified_lower_shelf_life(),1), ' years   ', '(', 
+                          round(as.numeric(rounded_modified_lower_shelf_life())*365,0), ' days)'),
                    style="color: #eb6864; font-size: 20px; font-style: normal; font-weight: bold;"
             )
         }
@@ -360,42 +370,59 @@ server = function(input, output) {
     
     # All model coefficient p-values
     poly_eval <- reactive({ polynomial_evaluation_of_linearity(keep(), poly_order()) })
-    
-    output$model_coeff_pvalue <- renderUI({ 
-        req(input$raw_upload)
+    model_p_value <- reactive({  
+        
         if(poly_order() == 1){
             
-            if( poly_eval()$b_pvalue >= 0.05 ){ ## Model coeff. not statistically significant
-                div(style = "color: red; font-size: 20px;",
-                    strong(format(round(poly_eval()$b_pvalue,3),nsmall=3)))
-            }
-            else if( poly_eval()$b_pvalue < 0.05 ){ # Model coeff. is statistically significant
-                div(style = "color: #2DC62D; font-size: 20px",
-                    strong(format(round(poly_eval()$b_pvalue,3),nsmall=3)))
-            }
+            p_val <- format(round(poly_eval()$b_pvalue,3),nsmall=3)
+            
         }
         else if(poly_order() == 2){
             
-            if( poly_eval()$c_pvalue >= 0.05 ){ ## Model coeff. not statistically significant
-                div(style = "color: red; font-size: 20px;",
-                    strong(format(round(poly_eval()$c_pvalue,3),nsmall=3)))
-            }
-            else if( poly_eval()$c_pvalue < 0.05 ){ # Model coeff. is statistically significant
-                div(style = "color: #2DC62D; font-size: 20px",
-                    strong(format(round(poly_eval()$c_pvalue,3),nsmall=3)))
-            }
+            p_val <- format(round(poly_eval()$c_pvalue,3),nsmall=3)
         }
         else if(poly_order() == 3){
             
-            if( poly_eval()$d_pvalue >= 0.05 ){ ## Model coeff. not statistically significant
-                div(style = "color: red; font-size: 20px;",
-                    strong(format(round(poly_eval()$d_pvalue,3),nsmall=3)))
-            }
-            else if( poly_eval()$d_pvalue < 0.05 ){ # Model coeff. is statistically significant
-                div(style = "color: #2DC62D; font-size: 20px",
-                    strong(format(round(poly_eval()$d_pvalue,3),nsmall=3)))
-            }
+            p_val <- format(round(poly_eval()$d_pvalue,3),nsmall=3)
         }
+        return(p_val)
+    })
+    
+    output$model_coeff_pvalue <- renderUI({ 
+        req(input$raw_upload)
+        # if(poly_order() == 1){
+            
+            if( model_p_value() >= 0.05 ){ ## Model coeff. not statistically significant
+                div(style = "color: red; font-size: 20px;",
+                    strong(model_p_value()))
+            }
+            else if( model_p_value() < 0.05 ){ # Model coeff. is statistically significant
+                div(style = "color: #2DC62D; font-size: 20px",
+                    strong(model_p_value()))
+            }
+        # }
+        # else if(poly_order() == 2){
+        #     
+        #     if( poly_eval()$c_pvalue >= 0.05 ){ ## Model coeff. not statistically significant
+        #         div(style = "color: red; font-size: 20px;",
+        #             strong(format(round(poly_eval()$c_pvalue,3),nsmall=3)))
+        #     }
+        #     else if( poly_eval()$c_pvalue < 0.05 ){ # Model coeff. is statistically significant
+        #         div(style = "color: #2DC62D; font-size: 20px",
+        #             strong(format(round(poly_eval()$c_pvalue,3),nsmall=3)))
+        #     }
+        # }
+        # else if(poly_order() == 3){
+        #     
+        #     if( poly_eval()$d_pvalue >= 0.05 ){ ## Model coeff. not statistically significant
+        #         div(style = "color: red; font-size: 20px;",
+        #             strong(format(round(poly_eval()$d_pvalue,3),nsmall=3)))
+        #     }
+        #     else if( poly_eval()$d_pvalue < 0.05 ){ # Model coeff. is statistically significant
+        #         div(style = "color: #2DC62D; font-size: 20px",
+        #             strong(format(round(poly_eval()$d_pvalue,3),nsmall=3)))
+        #     }
+        # }
     })
     
     output$warning_ui_model_coeff_pvalue <- renderUI({
@@ -549,43 +576,37 @@ server = function(input, output) {
     
     raw_shelf_life_summary_flextable <- reactive({ 
         df <- tibble(
-            "Shelf-Life (days)" = c(round(
-                solve_for_lower_shelf_life(
-                    raw_melted_data(), 
-                    poly_order(), 
-                    as.numeric(confidenceInterval()),  
-                    as.numeric(threshold_y())),
-                1)*365),
-             "Shelf-Life (years)" = c(round(
-                 solve_for_lower_shelf_life(
-                     raw_melted_data(),
-                     poly_order(), 
-                     as.numeric(confidenceInterval()),  
-                     as.numeric(threshold_y())),
-                 1)),
-             "R-squared" = c(raw_R_sq_val()),
-             "Model p-value"=c(format(round(raw_poly_eval()$b_pvalue,3), nsmall = 3))
+            "Raw Shelf-Life" = c(paste0(raw_lower_shelf_life(), " yrs (", round(raw_lower_shelf_life()*365,0), " days)")),
+            "Rounded Shelf-Life" = c(paste0(rounded_raw_lower_shelf_life(), " yrs (", round(rounded_raw_lower_shelf_life()*365,0), " days)")),
+            "R-squared" = c(raw_R_sq_val()),
+            "Model p-value"=c(model_p_value())
         )
     })
     
     modified_shelf_life_summary_flextable <- reactive({ 
         df <- tibble(
-            "Shelf-Life (days)" = c(round(
-                solve_for_lower_shelf_life(
-                    keep(), 
-                    poly_order(), 
-                    as.numeric(confidenceInterval()), 
-                    as.numeric(threshold_y())),
-                1)*365),
-             "Shelf-Life (years)" = c(round(
-                 solve_for_lower_shelf_life(
-                     keep(), 
-                     poly_order(), 
-                     as.numeric(confidenceInterval()), 
-                     as.numeric(threshold_y())),
-                 1)),
-             "R-squared" = c(format(round(R_sq_val(),2),nsmall=2)),
-             "Model p-value"=c(format(round(poly_eval()$b_pvalue,3), nsmall = 3))
+            "Raw Shelf-Life" = c(paste0(lower_shelf_life(), " yrs (", 
+                                        round(lower_shelf_life()*365,0), " days)")),
+            "Rounded Shelf-Life" = c(paste0(rounded_modified_lower_shelf_life(), " yrs (", 
+                                            round(rounded_modified_lower_shelf_life()*365,0), " days)")),
+            "R-squared" = c(format(round(R_sq_val(),2),nsmall=2)),
+            "Model p-value"=c(model_p_value())
+            # "Shelf-Life (days)" = c(round(
+            #     solve_for_lower_shelf_life(
+            #         keep(), 
+            #         poly_order(), 
+            #         as.numeric(confidenceInterval()), 
+            #         as.numeric(threshold_y())),
+            #     1)*365),
+            #  "Shelf-Life (years)" = c(round(
+            #      solve_for_lower_shelf_life(
+            #          keep(), 
+            #          poly_order(), 
+            #          as.numeric(confidenceInterval()), 
+            #          as.numeric(threshold_y())),
+            #      1)),
+            #  "R-squared" = c(format(round(R_sq_val(),2),nsmall=2)),
+            #  "Model p-value"=c(format(round(poly_eval()$b_pvalue,3), nsmall = 3))
         )
     })
 
@@ -655,7 +676,10 @@ server = function(input, output) {
                 raw_confidence_bands(),
                 poly_order(),
                 confidenceInterval()
-        ) + coord_cartesian(ylim = c(0,100))
+        ) +
+            coord_cartesian(ylim=c(0, NA)) + 
+            scale_y_continuous(breaks=seq(0, 120, 20))
+            # coord_cartesian(ylim = c(0,NA)) 
 
         return(p)
         })
@@ -677,7 +701,8 @@ server = function(input, output) {
             confidenceInterval()
         )
         p <- p + geom_point(data = exclude, size = reports_data_point_size, shape = 21, fill = NA, color = 'black') +
-            coord_cartesian(ylim = c(0,100)) 
+            coord_cartesian(ylim=c(0, NA)) + 
+            scale_y_continuous(breaks=seq(0, 120, 20))
         
         return(p)
         
@@ -699,6 +724,7 @@ server = function(input, output) {
         ))
     })
     final_name <- reactive({ as.character(paste0(input$filename_output, ".pptx")) })
+    
     ######################## RESIDUAL PLOTS ###################################
     ########################## Powerpoint Output ##############################
     output$pptx_id <- downloadHandler(
