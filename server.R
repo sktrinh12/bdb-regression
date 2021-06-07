@@ -133,14 +133,15 @@ server = function(input, output) {
         
         req(input$raw_upload)
         
-        regression_plot_global(
-            ui_font_size,
-            ui_data_point_size,
-            raw_melted_data(),
-            raw_confidence_bands(),
-            poly_order(),
-            confidenceInterval()
-        )
+        p <- regression_plot_global(
+                ui_font_size,
+                ui_data_point_size,
+                raw_melted_data(),
+                raw_confidence_bands(),
+                poly_order(),
+                confidenceInterval()
+            )
+        return(suppressWarnings(p))
     })
     
     ## Step 8: Calculate shelf life with and without confidence interval
@@ -297,7 +298,7 @@ server = function(input, output) {
         p <- p + geom_point(data = exclude, size = ui_data_point_size, shape = 21, fill = NA, color = 'black') +
             coord_cartesian(xlim = plot_range$x, ylim = plot_range$y)
             
-        return(p)
+        return(suppressWarnings(p))
        
     })
     
@@ -442,11 +443,12 @@ server = function(input, output) {
     ## Step 9: Calculate residuals and add residual plots for additional quality checks
     residuals_expr <- reactive({ find_residuals(keep(), poly_order()) })
     residual_vs_fit_plot_expr <- reactive({ residual_vs_fit_plot(keep(), poly_order())  })
+    residual_vs_fit_plot_expr_tooltip <- reactive({ residual_vs_fit_plot_w_tooltip( residual_vs_fit_plot_expr() ) })
     residual_histogram_plot_expr <- reactive({ residual_histogram(keep(), poly_order()) })
     
     output$residual_fit_plot <- renderPlotly({ 
         req(input$raw_upload)
-        residual_vs_fit_plot_expr()
+        residual_vs_fit_plot_expr_tooltip()
     })
     
     output$residual_histogram <- renderPlotly({ 
@@ -456,11 +458,13 @@ server = function(input, output) {
     
     ## Step 10: Check for normal distribution of residuals
     normal_probability_plot_expr <- reactive({ normal_probability_plot(keep(), poly_order(), residuals_expr()) })
+    normal_probability_plot_expr_tooltip <- reactive({ normal_probability_plot_w_tooltip(normal_probability_plot_expr()) })
+    
     anderson_darling_normality_test_pvalue <- reactive({ anderson_darling_normality_test(residuals_expr()) })
 
     output$normal_prob_plot_output <- renderPlotly({
         req(input$raw_upload) 
-        normal_probability_plot_expr()
+        normal_probability_plot_expr_tooltip()
     })
     
     output$anderson_darling_pvalue_table_output <- renderTable({
@@ -576,7 +580,7 @@ server = function(input, output) {
     
     raw_shelf_life_summary_flextable <- reactive({ 
         df <- tibble(
-            "Raw Shelf-Life" = c(paste0(raw_lower_shelf_life(), " yrs (", round(raw_lower_shelf_life()*365,0), " days)")),
+            "Raw Shelf-Life" = c(paste0(round(raw_lower_shelf_life(),1), " yrs (", round(raw_lower_shelf_life()*365,0), " days)")),
             "Rounded Shelf-Life" = c(paste0(rounded_raw_lower_shelf_life(), " yrs (", round(rounded_raw_lower_shelf_life()*365,0), " days)")),
             "R-squared" = c(raw_R_sq_val()),
             "Model p-value"=c(model_p_value())
@@ -585,28 +589,12 @@ server = function(input, output) {
     
     modified_shelf_life_summary_flextable <- reactive({ 
         df <- tibble(
-            "Raw Shelf-Life" = c(paste0(lower_shelf_life(), " yrs (", 
+            "Raw Shelf-Life" = c(paste0(round(lower_shelf_life(),1), " yrs (", 
                                         round(lower_shelf_life()*365,0), " days)")),
             "Rounded Shelf-Life" = c(paste0(rounded_modified_lower_shelf_life(), " yrs (", 
                                             round(rounded_modified_lower_shelf_life()*365,0), " days)")),
             "R-squared" = c(format(round(R_sq_val(),2),nsmall=2)),
             "Model p-value"=c(model_p_value())
-            # "Shelf-Life (days)" = c(round(
-            #     solve_for_lower_shelf_life(
-            #         keep(), 
-            #         poly_order(), 
-            #         as.numeric(confidenceInterval()), 
-            #         as.numeric(threshold_y())),
-            #     1)*365),
-            #  "Shelf-Life (years)" = c(round(
-            #      solve_for_lower_shelf_life(
-            #          keep(), 
-            #          poly_order(), 
-            #          as.numeric(confidenceInterval()), 
-            #          as.numeric(threshold_y())),
-            #      1)),
-            #  "R-squared" = c(format(round(R_sq_val(),2),nsmall=2)),
-            #  "Model p-value"=c(format(round(poly_eval()$b_pvalue,3), nsmall = 3))
         )
     })
 
@@ -681,7 +669,7 @@ server = function(input, output) {
             scale_y_continuous(breaks=seq(0, 120, 20))
             # coord_cartesian(ylim = c(0,NA)) 
 
-        return(p)
+        return(suppressWarnings(p))
         })
     
     modified_regression_plot_for_report <- reactive({
@@ -704,7 +692,7 @@ server = function(input, output) {
             coord_cartesian(ylim=c(0, NA)) + 
             scale_y_continuous(breaks=seq(0, 120, 20))
         
-        return(p)
+        return(suppressWarnings(p))
         
     })
     
@@ -853,11 +841,11 @@ server = function(input, output) {
                     location = ph_location_type(type = "title")
                 ) %>%
                 ph_with(
-                    value = residual_vs_fit_plot(raw_melted_data(), poly_order()), 
+                    value = raw_residual_vs_fit_plot_expr(), 
                     location = ph_location_type(type = "body", index = 4, position_right = F)
                 ) %>%
                 ph_with(
-                    value = residual_histogram(raw_melted_data(), poly_order()), 
+                    value = raw_residual_histogram_plot_expr(), 
                     location = ph_location_type(type = "body", index = 3, position_right = T)
                 ) %>%
                 ph_with(
@@ -871,7 +859,7 @@ server = function(input, output) {
                     location = ph_location_type(type = "title")
                 ) %>%
                 ph_with(
-                    value = normal_probability_plot(raw_melted_data(), poly_order(), find_residuals(raw_melted_data(), poly_order())), 
+                    value = raw_normal_probability_plot_expr(), 
                     location = ph_location_type(type = "body", index = 4, position_right = F)
                 ) %>%
                 ph_with(
@@ -934,11 +922,11 @@ server = function(input, output) {
                     location = ph_location_type(type = "title")
                 ) %>%
                 ph_with(
-                    value = residual_vs_fit_plot(keep(), poly_order()), 
+                    value = residual_vs_fit_plot_expr(), 
                     location = ph_location_type(type = "body", index = 4, position_right = F)
                 ) %>%
                 ph_with(
-                    value = residual_histogram(keep(), poly_order()), 
+                    value = residual_histogram_plot_expr(), 
                     location = ph_location_type(type = "body", index = 3, position_right = T)
                 ) %>%
                 ph_with(
@@ -952,7 +940,7 @@ server = function(input, output) {
                     location = ph_location_type(type = "title")
                 ) %>%
                 ph_with(
-                    value = normal_probability_plot(keep(), poly_order(), find_residuals(keep(), poly_order())), 
+                    value = normal_probability_plot_expr(), 
                     location = ph_location_type(type = "body", index = 4, position_right = F)
                 ) %>%
                 ph_with(

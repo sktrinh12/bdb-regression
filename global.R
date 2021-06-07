@@ -22,29 +22,30 @@ template_data <- tibble('Time'=c(0,0.5,1,1.5,2,3,4,5),
 )
 
 regression_plot_global <- function(text_size, data_point_size, df, confidence_bands, order, CI){
-    ggplot(df, aes(x=Time, y=value, color=Concentrations)) + 
-        geom_ribbon(data=df, 
-                    aes(x=Time, y=value, 
-                        ymin=confidence_bands[[2]], 
-                        ymax=confidence_bands[[4]]), 
-                    formula = y ~ poly(x,order, raw=TRUE), method="lm",col = "red", 
-                    level=as.numeric(CI), alpha=0.2) +
-        geom_line(data=confidence_bands, 
-                  aes(x=confidence_bands[[1]], y=confidence_bands[[3]]), 
-                  formula = y ~ poly(x,order, raw=TRUE), method="lm", col = "red") +
-        geom_point(size=data_point_size) + 
-        labs(x = "Time (years)",
-             y = "% of 4C Reference MFI") +
-        theme_minimal() +
-        scale_color_brewer(palette = 'Dark2', na.translate = F,
-                           labels = unique(df$Labels)) +
-        stat_regline_equation(data=df, 
-                              aes(x=Time, y=value,
-                                  label=paste(..eq.label.., ..rr.label.., sep = "~~~~~~")), 
-                              formula = y ~ poly(x,order,raw=TRUE), method="lm", col="red",
-                              label.x.npc="center",label.y.npc="top",size=5) +
-        theme(text=element_text(size = text_size),
-              legend.position = "bottom")
+    p <- ggplot(df, aes(x=Time, y=value, color=Concentrations)) + 
+            geom_ribbon(data=df, 
+                        aes(x=Time, y=value, 
+                            ymin=confidence_bands[[2]], 
+                            ymax=confidence_bands[[4]]), 
+                        formula = y ~ poly(x,order, raw=TRUE), method="lm",col = "red", 
+                        level=as.numeric(CI), alpha=0.2) +
+            geom_line(data=confidence_bands, 
+                      aes(x=confidence_bands[[1]], y=confidence_bands[[3]]), 
+                      formula = y ~ poly(x,order, raw=TRUE), method="lm", col = "red") +
+            geom_point(size=data_point_size) + 
+            labs(x = "Time (years)",
+                 y = "% of 4C Reference MFI") +
+            theme_minimal() +
+            scale_color_brewer(palette = 'Dark2', na.translate = F,
+                               labels = unique(df$Labels)) +
+            stat_regline_equation(data=df, 
+                                  aes(x=Time, y=value,
+                                      label=paste(..eq.label.., ..rr.label.., sep = "~~~~~~")), 
+                                  formula = y ~ poly(x,order,raw=TRUE), method="lm", col="red",
+                                  label.x.npc="center",label.y.npc="top",size=5) +
+            theme(text=element_text(size = text_size),
+                  legend.position = "bottom")
+    return(suppressWarnings(p))
 }
 
 ## Create concentration choice names for UI selection (based on file input)
@@ -468,17 +469,47 @@ residual_vs_fit_plot <- function(df_melt, order){
     y <- na.omit(df_melt$value)
     n <- length(x)
     fit <- lm(y ~ poly(x,order, raw=TRUE), data=df_melt)
+    fitted_y <- data.frame("y-fit"=fitted(fit))
     fit_residuals <- resid(fit)
-    se <- sqrt(sum(fit_residuals^2)/(n-2))
-    p <- ggplot(df_melt,aes(x=y, y=fit_residuals, label=Time)) + 
+    
+    p <- ggplot(df_melt,aes(x=fitted_y$y.fit, y=fit_residuals, label=Time, 
+                            text = sprintf("Time: %s yrs<br>Concentration: %s<br>Actual %% of 4C Ref. MFI: %.0f<br>Predicted %% of 4C Ref. MFI: %.0f<br>Residuals: %.2f", 
+                                        Time, df_melt$Concentrations, df_melt$value, fitted_y$y.fit, fit_residuals))) + 
         geom_point(size=3, color = '#eb6864') +
-        # geom_area(color='blue') +
         geom_hline(aes(yintercept=0)) +
         ylim(0-max(abs(fit_residuals)), 0+max(abs(fit_residuals))) +
         labs(title = 'Residuals vs. Fit Plot',
              x = 'Predicted % of 4C MFI', 
              y = 'Residuals')
+    # p <- ggplotly(p, tooltip=c("text"))
+    return(p)
+}
+
+residual_vs_fit_plot_w_tooltip <- function(p){
+    p <- ggplotly(p, tooltip=c("text"))
+    return(p)
+}
+
+residual_vs_fit_plot_UI <- function(df_melt, order){
+    df_melt <- na.omit(df_melt)
     
+    x <- na.omit(df_melt$Time)
+    y <- na.omit(df_melt$value)
+    n <- length(x)
+    fit <- lm(y ~ poly(x,order, raw=TRUE), data=df_melt)
+    fitted_y <- data.frame("y-fit"=fitted(fit))
+    fit_residuals <- resid(fit)
+    
+    p <- ggplot(df_melt,aes(x=fitted_y$y.fit, y=fit_residuals, label=Time, 
+                            text = sprintf("Time: %s yrs<br>Concentration: %s<br>Actual %% of 4C Ref. MFI: %.0f<br>Predicted %% of 4C Ref. MFI: %.0f<br>Residuals: %.2f", 
+                                           Time, df_melt$Concentrations, df_melt$value, fitted_y$y.fit, fit_residuals))) + 
+        geom_point(size=3, color = '#eb6864') +
+        geom_hline(aes(yintercept=0)) +
+        ylim(0-max(abs(fit_residuals)), 0+max(abs(fit_residuals))) +
+        labs(title = 'Residuals vs. Fit Plot',
+             x = 'Predicted % of 4C MFI', 
+             y = 'Residuals')
+    # p <- ggplotly(p, tooltip=c("text"))
     return(p)
 }
 
@@ -494,11 +525,9 @@ residual_histogram <- function(df_melt, order){
     p <- ggplot(df_melt,aes(x=fit_residuals, label=Time)) + 
         geom_histogram(binwidth=sd(fit_residuals), boundary=0, fill = '#eb6864') +
         labs(title = 'Histogram of Residuals',
-             # subtitle = "Generally, 95% of residuals should not be larger than 2x the standard deviation of the residuals.",
              x = 'Residuals', 
              y = '# of Residuals')
-    
-    
+
     return(p)
 }
 
@@ -510,21 +539,40 @@ find_residuals <- function(df_melt, order){
     n <- length(x)
     fit <- lm(y ~ poly(x,order, raw=TRUE), data=df_melt)
     fit_residuals <- resid(fit)
+    df <- df_melt %>% add_column("Residuals"=fit_residuals)
     
-    return(fit_residuals)
+    return(df)
 }
 
 normal_probability_plot <- function(df_melt, order, residuals){
-    
+
     # And adding line with proper properties
-    p <- ggplot(mapping = aes(sample = residuals)) + 
-        stat_qq_point(size = 3,color = "#eb6864") + 
+    p <-
+        ggplot(residuals, mapping = aes(sample = Residuals)) +
+        stat_qq_point(size = 3,color = "#eb6864") +
         stat_qq_line(color="black") +
+        # geom_abline(aes(slope=1, intercept=0), color="black") +
+        # geom_qq(color = "#eb6864") +
+        # geom_qq_line(colour = "black") +
         labs(title = 'Normal Probability Plot of Residuals',
-             x = 'Theoretical Quantiles', 
+             x = 'Theoretical Quantiles',
              y = 'Residuals') +
         theme(text=element_text(size = 11))
-    print(p)
+    return(p)
+}
+
+normal_probability_plot_UI <- function(df_melt, order, residuals){
+    p <- ggplot(residuals, mapping = aes(sample = Residuals)) +
+        stat_qq_point(size = 3,color = "#eb6864") +
+        stat_qq_line(color="black") +
+        # geom_abline(aes(slope=1, intercept=0), color="black") +
+        # geom_qq(color = "#eb6864") +
+        # geom_qq_line(colour = "black") +
+        labs(title = 'Normal Probability Plot of Residuals',
+             x = 'Theoretical Quantiles',
+             y = 'Residuals') +
+        theme(text=element_text(size = 11))
+    p <- ggplotly(p, tooltip=c("x", "y"))
     return(p)
 }
 
@@ -541,7 +589,7 @@ read_marker_data <- function(wave_data, sheet="Sheet1"){
 
 
 anderson_darling_normality_test <- function(residuals){
-    ad <- ad.test(residuals)
+    ad <- ad.test(residuals$Residuals)
     # print(ad)
     # sqrt(ad$statistic^2)
     p_value <- ad$p.value
