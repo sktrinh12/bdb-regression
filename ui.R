@@ -28,26 +28,17 @@ ui = tagList(
                  sidebarPanel(
                      includeHTML("analytics.html"),
                      div(style = " overflow-x: scroll;",
-                         
-                     fluidRow(column(12,fileInput("raw_upload","Choose raw stats file to upload",
-                             accept = c('text/xlsx',
-                                        '.xlsx')
-                         )
-                     )), 
-                     div(style = "display: grid; grid-template-columns: 250px 200px; padding-right: 5px",
-                         column(6,downloadButton("download_template_file", "Download Stats Template")),
-                         column(6,downloadButton("downloadExample", "Download Stats Example"))),
-                     br(),
-                     br(),
-                     fluidRow(
-                         column(8,textAreaInput("model_system_data","QC Model System Data",
-                             placeholder = "This will be copied to the top right corner of every PPT slide.",
-                             height = "100px")
-                             ),
-                         column(4,radioButtons('pop_number','Cell Pop #',
-                                 choices = c("P1", "P2", "P3"),
-                                 inline = TRUE)
-                     )), 
+                         radioButtons("analysis_type","Select Manual or OMIQ Analysis", choices = c("Manual", "OMIQ"), inline=TRUE),
+                         uiOutput('manual_or_omiq'),
+                         # div(style = "display: grid; grid-template-columns: 250px 250px;",
+                         #     div(style = "padding:5px;", downloadButton("download_template_file", "Download Stats Template")),
+                         #     div(style = "padding:5px;", downloadButton("downloadExample", "Download Stats Example"))),
+                         # br(),
+                         # div(style = "display: grid; grid-template-columns: auto;",
+                         #     fileInput("raw_upload","Choose stats file to upload",
+                         #     accept = c('text/xlsx',
+                         #                '.xlsx'))), 
+                     
                      fluidRow(column(12,radioButtons('polynomial_order','Order of Polynomial', choices=c("Linear","2nd Order", "3rd Order"), selected="Linear", inline=TRUE))),
                      fluidRow(uiOutput('warning_ui_polynomial_choice')),
                      br(),

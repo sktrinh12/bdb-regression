@@ -5,8 +5,11 @@ mypptx <- read_pptx("bd_template_homemade.pptx")
 ## CONSTANTS
 ui_font_size <- 16
 ui_data_point_size <- 7
+ui_eqn_size <- 5
 reports_font_size <- 12
 reports_data_point_size <- 4
+reports_eqn_size <- 5
+
 fontname <- "Arial"
 
 server = function(input, output) {
@@ -23,6 +26,46 @@ server = function(input, output) {
                             'Conc_2000_ng'=rep(NA, 8),
                             row.names=NULL
     )
+    
+    output$manual_or_omiq <- renderUI({
+        
+        if(input$analysis_type == "Manual"){
+            tagList(div(style = "display: grid; grid-template-columns: 250px 250px;",
+                        div(style = "padding:5px;", downloadButton("download_template_file", "Download Stats Template")),
+                        div(style = "padding:5px;", downloadButton("downloadExample", "Download Stats Example"))),
+                    br(),
+                    div(style = "display: grid; grid-template-columns: auto;",
+                        fileInput("raw_upload","Choose stats file to upload",
+                                  accept = c('text/xlsx',
+                                             '.xlsx'))),
+                    fluidRow(
+                        column(8,textAreaInput("model_system_data","QC Model System Data",
+                                               placeholder = "This will be copied to the top right corner of every PPT slide.",
+                                               height = "100px")
+                        ),
+                        column(4,radioButtons('pop_number','Cell Pop #',
+                                              choices = c("P1", "P2", "P3"),
+                                              inline = TRUE)
+                        ))
+                    )
+        }
+        else{
+            tagList(
+                fileInput(
+                    "raw_upload",
+                    "Choose stats file to upload",
+                    accept = c('text/xlsx',
+                               '.xlsx')
+                ),
+                fileInput(
+                    "omiq_report_upload",
+                    "Upload OMIQ Stability Report",
+                    accept = c(".pdf")
+                )
+            )
+        }
+        
+    })
     
     # Download Template Stats File
     output$downloadData <- downloadHandler(
@@ -136,6 +179,7 @@ server = function(input, output) {
         p <- regression_plot_global(
                 ui_font_size,
                 ui_data_point_size,
+                ui_eqn_size,
                 raw_melted_data(),
                 raw_confidence_bands(),
                 poly_order(),
@@ -176,11 +220,11 @@ server = function(input, output) {
     
     ## Step 9: Calculate residuals and add residual plots for additional quality checks
     raw_residuals_expr <- reactive({ find_residuals(raw_melted_data(), poly_order()) })
-    raw_residual_vs_fit_plot_expr <- reactive({ residual_vs_fit_plot(raw_melted_data(), poly_order())  })
-    raw_residual_histogram_plot_expr <- reactive({ residual_histogram(raw_melted_data(), poly_order()) })
+    raw_residual_vs_fit_plot_expr <- reactive({ residual_vs_fit_plot(raw_melted_data(), poly_order(), reports_font_size, reports_data_point_size)  })
+    raw_residual_histogram_plot_expr <- reactive({ residual_histogram(raw_melted_data(), poly_order(), reports_font_size) })
     
     ## Step 10: Check for normal distribution of residuals
-    raw_normal_probability_plot_expr <- reactive({ normal_probability_plot(raw_melted_data(), poly_order(), raw_residuals_expr()) })
+    raw_normal_probability_plot_expr <- reactive({ normal_probability_plot(raw_melted_data(), poly_order(), raw_residuals_expr(), reports_font_size, reports_data_point_size) })
     raw_anderson_darling_normality_test_pvalue <- reactive({ anderson_darling_normality_test(raw_residuals_expr()) })
     
     ############################### MODIFIED DATA - SHOWN ON GUI ###################################
@@ -290,6 +334,7 @@ server = function(input, output) {
         p <- regression_plot_global(
             ui_font_size,
             ui_data_point_size,
+            ui_eqn_size,
             keep,
             confidence_bands(),
             poly_order(),
@@ -442,9 +487,9 @@ server = function(input, output) {
     
     ## Step 9: Calculate residuals and add residual plots for additional quality checks
     residuals_expr <- reactive({ find_residuals(keep(), poly_order()) })
-    residual_vs_fit_plot_expr <- reactive({ residual_vs_fit_plot(keep(), poly_order())  })
+    residual_vs_fit_plot_expr <- reactive({ residual_vs_fit_plot(keep(), poly_order(), font_size = 12, data_point_size = 3)  })
     residual_vs_fit_plot_expr_tooltip <- reactive({ residual_vs_fit_plot_w_tooltip( residual_vs_fit_plot_expr() ) })
-    residual_histogram_plot_expr <- reactive({ residual_histogram(keep(), poly_order()) })
+    residual_histogram_plot_expr <- reactive({ residual_histogram(keep(), poly_order(), font_size = 12) })
     
     output$residual_fit_plot <- renderPlotly({ 
         req(input$raw_upload)
@@ -457,7 +502,13 @@ server = function(input, output) {
     })
     
     ## Step 10: Check for normal distribution of residuals
-    normal_probability_plot_expr <- reactive({ normal_probability_plot(keep(), poly_order(), residuals_expr()) })
+    normal_probability_plot_expr <-
+        reactive({
+            normal_probability_plot(keep(),
+                                    poly_order(),
+                                    residuals_expr(),
+                                    font_size = 12, data_point_size = 3)
+        })
     normal_probability_plot_expr_tooltip <- reactive({ normal_probability_plot_w_tooltip(normal_probability_plot_expr()) })
     
     anderson_darling_normality_test_pvalue <- reactive({ anderson_darling_normality_test(residuals_expr()) })
@@ -532,49 +583,6 @@ server = function(input, output) {
             )
         }
     })
-    
-
-    ############################################ SUMMARY DATA FOR BULK ANALYSIS #############################################
-    # optimal <- reactive({ wave_df()$`Optimal (ng/test)`[wave_df()$`Marker Description` == input$select_marker] })
-    # output$marker_optimal <- renderUI({
-    #     tags$i(paste0('Optimal: ',optimal(), ' ng/test'),
-    #            style="color: #eb6864; font-size: 18px; font-style: normal; font-weight: bold; padding-top: 20px;"
-    #     )
-    #     
-    # })
-    # 
-    # raw_linear_results <- reactive({ results_summary(raw_melted_data(), 1, as.numeric(confidenceInterval())) })
-    # output$linear_results_output <- renderTable({ raw_linear_results() })
-    # 
-    # optimal_linear_results <- reactive({ results_summary(optimal_data(), 1, as.numeric(confidenceInterval())) })
-    # output$optimal_linear_results_output <- renderTable({ optimal_linear_results() })
-    # 
-    # raw_second_order_results <- reactive({ results_summary(raw_melted_data(), 2, as.numeric(confidenceInterval())) })
-    # output$second_order_results_output <- renderTable({ raw_second_order_results() })
-    # 
-    # optimal_second_order_results <- reactive({ results_summary(optimal_data(), 2, as.numeric(confidenceInterval())) })
-    # output$optimal_second_order_results_output <- renderTable({ optimal_second_order_results() })
-    # 
-    # optimal_data <- reactive({ melt_reference_mfi_table(concentrations_to_keep(raw_reference_MFI_data_wide_UI_only(), concentrations_around_optimal(optimal()))) })
-    # 
-    # summary_table <- reactive({ req(input$raw_upload)
-    #     tibble(rbind(cbind('Concentrations Included'='Raw','Model Order'='Linear',raw_linear_results()),
-    #                  cbind('Concentrations Included'='Optimal +1/-2','Model Order'='Linear',optimal_linear_results()),
-    #                  cbind('Concentrations Included'='Raw','Model Order'='2nd Order',raw_second_order_results()),
-    #                  cbind('Concentrations Included'='Optimal +1/-2','Model Order'='2nd Order',optimal_second_order_results()))) })
-    # 
-    # output$results_table <- renderTable({ summary_table() })
-    # 
-    # 
-    # observeEvent(input$write_results, {
-    #     write_csv(summary_table(), 'summary_results_wave5.csv', append=TRUE) })
-    # 
-    
-
-    
-    ########################## SHELF LIFE ##########################
-    
-    
     
     ############################################ FLEXTABLES FOR REPORTS #############################################
     
@@ -660,6 +668,7 @@ server = function(input, output) {
         p <- regression_plot_global(
                 reports_font_size,
                 reports_data_point_size,
+                reports_eqn_size,
                 raw_melted_data(),
                 raw_confidence_bands(),
                 poly_order(),
@@ -683,6 +692,7 @@ server = function(input, output) {
         p <- regression_plot_global(
             reports_font_size,
             reports_data_point_size,
+            reports_eqn_size,
             keep,
             confidence_bands(),
             poly_order(),
@@ -695,6 +705,7 @@ server = function(input, output) {
         return(suppressWarnings(p))
         
     })
+    
     
     ## Text formatting for PPT presentation
     label_fp <- fp_text(bold = TRUE, color = "black", font.size = 16)
@@ -841,11 +852,11 @@ server = function(input, output) {
                     location = ph_location_type(type = "title")
                 ) %>%
                 ph_with(
-                    value = raw_residual_vs_fit_plot_expr(), 
+                    value = residual_vs_fit_plot(raw_melted_data(), poly_order(), reports_font_size, reports_data_point_size), 
                     location = ph_location_type(type = "body", index = 4, position_right = F)
                 ) %>%
                 ph_with(
-                    value = raw_residual_histogram_plot_expr(), 
+                    value = residual_histogram(raw_melted_data(), poly_order(), font_size = 12), 
                     location = ph_location_type(type = "body", index = 3, position_right = T)
                 ) %>%
                 ph_with(
@@ -922,11 +933,11 @@ server = function(input, output) {
                     location = ph_location_type(type = "title")
                 ) %>%
                 ph_with(
-                    value = residual_vs_fit_plot_expr(), 
+                    value = residual_vs_fit_plot(keep(), poly_order(), reports_font_size, reports_data_point_size), 
                     location = ph_location_type(type = "body", index = 4, position_right = F)
                 ) %>%
                 ph_with(
-                    value = residual_histogram_plot_expr(), 
+                    value = residual_histogram(keep(), poly_order(), font_size = 12), 
                     location = ph_location_type(type = "body", index = 3, position_right = T)
                 ) %>%
                 ph_with(
