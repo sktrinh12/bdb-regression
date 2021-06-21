@@ -74,6 +74,7 @@ concentration_choiceValues <- function(choiceNames){
 ## Calculate the % of 4C Reference MFI data from the uploaded stats
 calculate_perct_4C_MFI <- function(df){
 
+    print(df)
     calc_vect <- c() # Initialize % of 4C MFI data
     for(i in unique(df$Concentration)){
         for(row in c(1:nrow(df[df$Concentration == i,]))){

@@ -8,6 +8,8 @@ library(reshape2)
 library(nortest)
 library(ggpubr)
 library(grid)
+library(pdftools)
+
 
 ORDER = 1 # For linear model
 CI = 0.95
@@ -16,26 +18,29 @@ DATA_PT_SIZE = 10
 FONT_SIZE = 22
 EQN_SIZE = 10
 
-source('omiq_regression.R')
-source('global.R')
+# source('omiq_regression.R')
+# source('global.R')
 
 ## Step 1: Upload raw stats ##
-read_stats <- function(stats_file, pop){
-    stats <- read_csv(stats_file, col_types = cols())
+configure_stats <- function(stats, pop){
+    
     stats <- stats[!is.na(stats$SI),] %>% arrange(Concentration)
     stats_pop <- stats[stats$pop == pop,]
     
     stats_pop <- stats_pop %>% select(Stability.Time.point, Concentration, `%+`, `MFI+`, `MFI-`, `rSD-`)
     colnames(stats_pop)[1] <- c("Condition")
-    
+    print(stats_pop)
     return(stats_pop)
     
 }
 
 get_stats_table_for_mfi_table <- function(stats_file, cell_pop){
     
+    ## Step 1a: Read in raw stats
+    stats <- read_csv(stats_file, col_types = cols()) 
+    
     ## Step 1: Upload raw stats ##
-    df <- read_stats(stats_file, cell_pop)
+    df <- configure_stats(stats, cell_pop)
     
     ## Step 2: Calculate % of 4C Reference MFI ##
     df <- calculate_perct_4C_MFI(df)
@@ -270,7 +275,8 @@ quality_checks_pdf <- function(resid_plot, resid_histogram, normal_prob_plot, no
 }
 
 
-build_regression_report <- function(stats_file, cell_pop, marker_name, optimal){
+build_regression_report <- function(data_path, stats_file, cell_pop, marker_name, optimal){
+    
     
     ## Step 1: Upload raw stats ##
     df <- get_stats_table_for_mfi_table(stats_file, cell_pop)
@@ -312,11 +318,11 @@ build_regression_report <- function(stats_file, cell_pop, marker_name, optimal){
                                   label=paste(..rr.label..)),
                               formula = y ~ poly(x,ORDER,raw=TRUE), method="lm", col="red",
                               label.x=0,label.y=5,size=12)
-        # annotation_custom(my_grob) +
-        # stat_cor(label.x = 1, label.y = 20, size=12) +
-        # stat_regline_equation(label.x = 1, label.y = 10, size=24)
-   
-   
+    # annotation_custom(my_grob) +
+    # stat_cor(label.x = 1, label.y = 20, size=12) +
+    # stat_regline_equation(label.x = 1, label.y = 10, size=24)
+    
+    
     residuals <- find_residuals(df_melt, ORDER)
     
     ## Step 10: Create residual vs fit plot ##
@@ -338,7 +344,7 @@ build_regression_report <- function(stats_file, cell_pop, marker_name, optimal){
     
     normality_pvalue_png <- anderson_darling_p_value_png(normality_p_value)
     
-    pdf(paste0("regression_report_",cell_pop, ".pdf"), title="Regression for Stability", width = 16, height = 10, onefile = TRUE)
+    pdf(file.path(data_path, paste0("regression_report_",cell_pop, ".pdf")), title="Regression for Stability", width = 16, height = 10, onefile = TRUE)
     print(regression_pdf(regress_plot, reference_mfi_table_png, shelf_life_summary_png, cell_pop, marker_name, optimal))
     print(quality_checks_pdf(resid_plot, resid_histogram, normal_prob_plot, normality_pvalue_png))
     
@@ -346,20 +352,54 @@ build_regression_report <- function(stats_file, cell_pop, marker_name, optimal){
 }
 # build_regression_report("all_stats_new_wellids.csv", "Lymph")
 
+merge_full_stability_report <- function(data_path, report_filename_list, all_regression_reports){
+    
+    omiq_stability_report <- file.path(data_path, "full_stability_report.pdf")
+    title_page_output <- file.path(data_path, "title_page.pdf")
+    omiq_stability_subset_output <- file.path(data_path, "omiq_stability.pdf")
+    
+    ## Subset title page so we can add regression reports after title page
+    title_page <- pdf_subset(omiq_stability_report, 
+                             pages = 1, 
+                             output = title_page_output)
+    
+    ## Subset omiq stability report without title page
+    omiq_stability_pages <- pdf_subset(omiq_stability_report, 
+                                       pages = 2:pdf_info(omiq_stability_report)$pages, 
+                                       output = omiq_stability_subset_output)
+    
+    ## Combine title page, regression reports for each cell pop, and omiq stability report
+    pdf_combine(c(title_page,
+                  all_regression_reports,
+                  omiq_stability_pages
+                  
+    ),
+    output = file.path(data_path, "final_stability_report_with_regression.pdf"))
+    
+    ## Remove subsetted files from directory
+    invisible(file.remove(c(title_page_output, omiq_stability_subset_output, all_regression_reports, report_filename_list)))
+}
+
 build_regression_report_per_cell_pop <- function(data_path, stats_file){
-    stats_df <- read_csv(file.path(data_path, stats_file), col_types = cols())
+    stats_file <- file.path(data_path, stats_file)
+    
+    stats_df <- read_csv(stats_file, col_types = cols())
     marker_name <- paste(unique(stats_df$Target.Species), 
                          unique(stats_df$Specificity..CD.), 
                          unique(stats_df$Clone), 
                          unique(stats_df$Fluorochrome))
     
     cell_pop_list <- unique(stats_df$pop)
-    
+    regression_report_filename_list <- c()
     for(pop in cell_pop_list){
         print(paste0("Building regression report for ", pop))
         optimal <- unique(stats_df$Optimal[stats_df$pop == pop])
-        build_regression_report(stats_file, pop, marker_name, optimal)
+        build_regression_report(data_path, stats_file, pop, marker_name, optimal)
+        regression_report_filename_list <- append(regression_report_filename_list, 
+                                                  file.path(data_path, paste0("regression_report_", pop, ".pdf")))
+        
     }
+    
+    all_regression_reports <- pdf_combine(regression_report_filename_list, output = "all_reports.pdf")
+    merge_full_stability_report(data_path, regression_report_filename_list, all_regression_reports)
 }
-# build_regression_report_per_cell_pop("stability_all_stats.csv")
-

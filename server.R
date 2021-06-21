@@ -1,4 +1,5 @@
 source('global.R')
+source('regression_report.R')
 wave_summary_file <- "wave5_summary.xlsx"
 mypptx <- read_pptx("bd_template_homemade.pptx")
 
@@ -113,16 +114,31 @@ server = function(input, output) {
         }
         else if(input$analysis_type == "OMIQ"){
             df <- readr::read_csv(inFile$datapath)
+            df <- configure_stats(df, "Lymph")
         }
         
         return(df)
     })
     
     ## Step 2: Calculate % of 4C Reference MFI Data
+    
     raw_upload_data_with_perct_MFI <- reactive({
         req(input$raw_upload)
+        # if(input$analysis_type == "Manual"){
+        #     df <- calculate_perct_4C_MFI(raw_upload_data())
+        #     
+        # }
+        # else if(input$analysis_type == "OMIQ"){
+        #     
+        #     df <- calculate_perct_4C_MFI(df)
+        # }
         calculate_perct_4C_MFI(raw_upload_data())
+        # return(df)
     })
+    # raw_upload_data_with_perct_MFI <- reactive({
+    #     req(input$raw_upload)
+    #     calculate_perct_4C_MFI(raw_upload_data())
+    # })
     
     
     ## Step 3: Create plots for all stats
