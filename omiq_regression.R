@@ -16,12 +16,12 @@ library(ggpubr)
 
 ## Step 1: Upload raw stats ##
 read_stats <- function(stats_file, pop){
-    stats <- read_csv(stats_file)
-    stats <- stats[!is.na(stats$SI),] %>% arrange(ug.test)
+    stats <- read_csv(stats_file, col_types = cols())
+    stats <- stats[!is.na(stats$SI),] %>% arrange(Concentration)
     stats_pop <- stats[stats$pop == pop,]
     
     stats_pop <- stats_pop %>% select(Stability.Time.point, ug.test, `%+`, `MFI+`, `MFI-`, `rSD-`)
-    colnames(stats_pop)[1:2] <- c("Condition", "Concentration")
+    colnames(stats_pop)[1] <- c("Condition")
 
     return(stats_pop)
     
@@ -32,8 +32,12 @@ rounded_shelf_life <- function(shelf_life){
     ## 2. If a half or whole integer, still round down to next half integer
     ## 3. If 1.5yrs, don't round down
     
+    # If shelf-life is greater than 5 years, round down to 5 years to avoid extrapolation
+    if(shelf_life > 5){
+        shelf_life <- 5 # max timepoint tested
+    }
     # If shelf-life is equal to or below 1.5y, don't round down
-    if(shelf_life <= 1.5){
+    else if(shelf_life <= 1.5){
         shelf_life <- shelf_life
     }
     # If shelf-life is a whole # or half integer (ex. 4.0 or 3.5), round down to next nearest half integer

@@ -7,6 +7,7 @@ library(tibble)
 library(reshape2)
 library(nortest)
 library(ggpubr)
+library(grid)
 
 ORDER = 1 # For linear model
 CI = 0.95
@@ -15,17 +16,17 @@ DATA_PT_SIZE = 10
 FONT_SIZE = 22
 EQN_SIZE = 10
 
-# source('omiq_regression.R')
+source('omiq_regression.R')
 source('global.R')
 
 ## Step 1: Upload raw stats ##
 read_stats <- function(stats_file, pop){
-    stats <- read_csv(stats_file)
-    stats <- stats[!is.na(stats$SI),] %>% arrange(ug.test)
+    stats <- read_csv(stats_file, col_types = cols())
+    stats <- stats[!is.na(stats$SI),] %>% arrange(Concentration)
     stats_pop <- stats[stats$pop == pop,]
     
-    stats_pop <- stats_pop %>% select(Stability.Time.point, ug.test, `%+`, `MFI+`, `MFI-`, `rSD-`)
-    colnames(stats_pop)[1:2] <- c("Condition", "Concentration")
+    stats_pop <- stats_pop %>% select(Stability.Time.point, Concentration, `%+`, `MFI+`, `MFI-`, `rSD-`)
+    colnames(stats_pop)[1] <- c("Condition")
     
     return(stats_pop)
     
@@ -117,11 +118,11 @@ shelf_life_estimates_table_png <- function(stats_file, shelf_life_df, p_value, s
             row = 3,
             column = c(1:2),
             linewidth = 5,
-            fill = "#f69494",
-            color = "#ee0000"
+            fill = "#ffec8b",
+            color = "#ffd700"
         )
     }
-    if(unique(stats_file$Fluorochrome) == "Ab-E" & shelf_life < 1){
+    if(unique(stats_file$Fluorochrome) == "Ab-E" & shelf_life > 0 & shelf_life < 1){
         shelf_life_df_tab <- table_cell_bg(
             shelf_life_df_tab,
             row = 3,
@@ -131,7 +132,7 @@ shelf_life_estimates_table_png <- function(stats_file, shelf_life_df, p_value, s
             color = "#ee0000"
         )
     }
-    else if(unique(stats_file$Fluorochrome) == "Purified" & shelf_life < 2){
+    else if(unique(stats_file$Fluorochrome) == "Purified" & shelf_life > 0 & shelf_life < 2){
         shelf_life_df_tab <- table_cell_bg(
             shelf_life_df_tab,
             row = 3,
@@ -141,7 +142,7 @@ shelf_life_estimates_table_png <- function(stats_file, shelf_life_df, p_value, s
             color = "#ee0000"
         )
     }
-    else if(shelf_life < 1.5){
+    else if(shelf_life < 1.5 & shelf_life > 0){
         shelf_life_df_tab <- table_cell_bg(
             shelf_life_df_tab,
             row = 3,
@@ -175,7 +176,7 @@ anderson_darling_p_value_png <- function(p_value){
                                                              colnames.style = ggpubr::colnames_style(fill = "lightgray",
                                                                                                      size = 28,
                                                                                                      linecolor = "black")))
-
+    
     # Reject null hypothesis - not normally distributed - flag as red
     if(p_value < 0.05){
         ad_p_value_df <- table_cell_bg(
@@ -203,7 +204,7 @@ anderson_darling_p_value_png <- function(p_value){
     print(ad_p_value_df)
 }
 
-regression_pdf <- function(regress_plot, reference_mfi_table, shelf_life_summary_table){
+regression_pdf <- function(regress_plot, reference_mfi_table, shelf_life_summary_table, cell_pop, marker_name, optimal){
     
     # Create regression plot png
     png("regression_plot.png", width = 1200, height = 800, units = "px")
@@ -224,9 +225,10 @@ regression_pdf <- function(regress_plot, reference_mfi_table, shelf_life_summary
     for (i in c("regression_plot.png","StatsTable.png", "ShelfLifeEstimates.png")) {
         png_plots[[i]] = grid::rasterGrob(png::readPNG(i))
     }
-
+    
     figure = ggarrange(
         png_plots[[1]], ggarrange(png_plots[[2]], png_plots[[3]], ncol = 2),
+        labels = c(paste0(cell_pop,"\n",marker_name, "\n", optimal)),
         nrow = 2
     )
     
@@ -268,7 +270,7 @@ quality_checks_pdf <- function(resid_plot, resid_histogram, normal_prob_plot, no
 }
 
 
-build_regression_report <- function(stats_file, cell_pop){
+build_regression_report <- function(stats_file, cell_pop, marker_name, optimal){
     
     ## Step 1: Upload raw stats ##
     df <- get_stats_table_for_mfi_table(stats_file, cell_pop)
@@ -284,20 +286,37 @@ build_regression_report <- function(stats_file, cell_pop){
     
     ## Step 6: Calculate predicted shelf-life ##
     lower_shelf_life <- solve_for_lower_shelf_life(df_melt, ORDER, CI, THRESHOLD_MFI)
-
+    
     shelf_life <- solve_for_shelf_life(df_melt, THRESHOLD_MFI, ORDER)
     
     ## Step 7: Calculate model p-value ##
     p_value <- polynomial_evaluation_of_linearity(df_melt, ORDER)
-
+    
     ## Step 8: Calculated R^2 value ##
     r_sq <- R_sq(df_melt, ORDER)
     
     # Step 9: Create plot of regression model ##
-    regress_plot <- regression_plot_global(FONT_SIZE, DATA_PT_SIZE, EQN_SIZE, df_melt, bands, ORDER, CI)  +
-        coord_cartesian(ylim=c(0, NA)) + 
-        scale_y_continuous(breaks=seq(0, 120, 20))
+    my_grob = grobTree(textGrob("This text stays in place!", x=0.1,  y=0.95, hjust=0,
+                                gp=gpar(col="blue", fontsize=15, fontface="italic")))
     
+    regress_plot <- regression_plot_global(FONT_SIZE, DATA_PT_SIZE, EQN_SIZE, df_melt, bands, ORDER, CI, 0.1, 0.2)  +
+        coord_cartesian(ylim=c(0, NA)) + 
+        scale_y_continuous(breaks=seq(0, 120, 20)) +
+        stat_regline_equation(data=df_melt,
+                              aes(x=Time, y=value,
+                                  label=paste(..eq.label..)),
+                              formula = y ~ poly(x,ORDER,raw=TRUE), method="lm", col="red",
+                              label.x=0,label.y=10,size=12) +
+        stat_regline_equation(data=df_melt,
+                              aes(x=Time, y=value,
+                                  label=paste(..rr.label..)),
+                              formula = y ~ poly(x,ORDER,raw=TRUE), method="lm", col="red",
+                              label.x=0,label.y=5,size=12)
+        # annotation_custom(my_grob) +
+        # stat_cor(label.x = 1, label.y = 20, size=12) +
+        # stat_regline_equation(label.x = 1, label.y = 10, size=24)
+   
+   
     residuals <- find_residuals(df_melt, ORDER)
     
     ## Step 10: Create residual vs fit plot ##
@@ -310,75 +329,37 @@ build_regression_report <- function(stats_file, cell_pop){
     resid_histogram <- residual_histogram(df_melt, ORDER, FONT_SIZE)
     
     normality_p_value <- anderson_darling_normality_test(residuals)
-
+    
     shelf_life_df <- create_shelf_life_summary_table(lower_shelf_life, r_sq, p_value)
     
-    shelf_life_summary_png <- shelf_life_estimates_table_png(read_csv(stats_file), shelf_life_df, p_value$b_pvalue, lower_shelf_life, r_sq)
+    shelf_life_summary_png <- shelf_life_estimates_table_png(read_csv(stats_file, col_types = cols()), shelf_life_df, p_value$b_pvalue, lower_shelf_life, r_sq)
     
     reference_mfi_table_png <- perc_4C_mfi_table_png(df)
-
+    
     normality_pvalue_png <- anderson_darling_p_value_png(normality_p_value)
-
-    pdf("example_regression_report.pdf", title="Regression for Stability", width = 16, height = 10, onefile = TRUE)
-    print(regression_pdf(regress_plot, reference_mfi_table_png, shelf_life_summary_png))
+    
+    pdf(paste0("regression_report_",cell_pop, ".pdf"), title="Regression for Stability", width = 16, height = 10, onefile = TRUE)
+    print(regression_pdf(regress_plot, reference_mfi_table_png, shelf_life_summary_png, cell_pop, marker_name, optimal))
     print(quality_checks_pdf(resid_plot, resid_histogram, normal_prob_plot, normality_pvalue_png))
     
     dev.off()
 }
-build_regression_report("all_stats_new_wellids.csv", "Lymph")
+# build_regression_report("all_stats_new_wellids.csv", "Lymph")
 
+build_regression_report_per_cell_pop <- function(data_path, stats_file){
+    stats_df <- read_csv(file.path(data_path, stats_file), col_types = cols())
+    marker_name <- paste(unique(stats_df$Target.Species), 
+                         unique(stats_df$Specificity..CD.), 
+                         unique(stats_df$Clone), 
+                         unique(stats_df$Fluorochrome))
+    
+    cell_pop_list <- unique(stats_df$pop)
+    
+    for(pop in cell_pop_list){
+        print(paste0("Building regression report for ", pop))
+        optimal <- unique(stats_df$Optimal[stats_df$pop == pop])
+        build_regression_report(stats_file, pop, marker_name, optimal)
+    }
+}
+# build_regression_report_per_cell_pop("stability_all_stats.csv")
 
-# regression_plot_global <- function(text_size, data_point_size, df, confidence_bands, order, CI){
-#     p <- ggplot(df, aes(x=Time, y=value, color=Concentrations)) + 
-#         geom_ribbon(data=df, 
-#                     aes(x=Time, y=value, 
-#                         ymin=confidence_bands[[2]], 
-#                         ymax=confidence_bands[[4]]), 
-#                     formula = y ~ poly(x,order, raw=TRUE), method="lm",col = "red", 
-#                     level=as.numeric(CI), alpha=0.2) +
-#         geom_line(data=confidence_bands, 
-#                   aes(x=confidence_bands[[1]], y=confidence_bands[[3]]), 
-#                   formula = y ~ poly(x,order, raw=TRUE), method="lm", col = "red") +
-#         geom_point(size=data_point_size) + 
-#         labs(x = "Time (years)",
-#              y = "% of 4C Reference MFI") +
-#         theme_minimal() +
-#         scale_color_brewer(palette = 'Dark2', na.translate = F,
-#                            labels = unique(df$Labels)) +
-#         stat_regline_equation(data=df, 
-#                               aes(x=Time, y=value,
-#                                   label=paste(..eq.label.., ..rr.label.., sep = "~~~~~~")), 
-#                               formula = y ~ poly(x,order,raw=TRUE), method="lm", col="red",
-#                               label.x.npc="center",label.y.npc="top",size=5) +
-#         theme(text=element_text(size = text_size),
-#               legend.position = "bottom")
-#     return(suppressWarnings(p))
-# }
-# 
-# plot_regression <- function(df, order, CI, confidence_bands){
-#     
-#     regression_plot <- ggplot(df, aes(x=Time, y=value, color=Concentrations)) + 
-#         geom_ribbon(data=df, 
-#                     aes(x=Time, y=value, 
-#                         ymin=confidence_bands[[2]], 
-#                         ymax=confidence_bands[[4]]), 
-#                     formula = y ~ poly(x,order, raw=TRUE), method="lm", col = "red", 
-#                     level=as.numeric(CI), alpha=0.2) +
-#         geom_line(data=confidence_bands, 
-#                   aes(x=`X Values`, y=`Y Values`), 
-#                   formula = y ~ poly(x,order, raw=TRUE), method="lm", col = "red") +
-#         geom_point(size=DATA_PT_SIZE) + 
-#         labs(x = "Time (years)",
-#              y = "% of 4C Reference MFI") +
-#         theme_minimal() +
-#         scale_color_brewer(palette = 'Reds', na.translate = F,
-#                            labels = unique(df$Labels)) +
-#         stat_regline_equation(data=df, 
-#                               aes(x=Time, y=value,
-#                                   label=paste(..eq.label.., ..rr.label.., sep = "~~~~~~")), 
-#                               formula = y ~ poly(x,order,raw=TRUE), method="lm", col="red",
-#                               label.x.npc="center", label.y.npc="top", size=DATA_PT_SIZE) +
-#         theme(text=element_text(size = FONT_SIZE),
-#               legend.position = "bottom")
-#     return(regression_plot)
-# }

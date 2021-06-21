@@ -54,8 +54,8 @@ server = function(input, output) {
                 fileInput(
                     "raw_upload",
                     "Choose stats file to upload",
-                    accept = c('text/xlsx',
-                               '.xlsx')
+                    accept = c('text/csv',
+                               '.csv')
                 ),
                 fileInput(
                     "omiq_report_upload",
@@ -108,7 +108,13 @@ server = function(input, output) {
         inFile <- input$raw_upload
         if(is.null(inFile))
             return(NULL)
-        df <- readxl::read_xlsx(inFile$datapath)
+        if(input$analysis_type == "Manual"){
+            df <- readxl::read_xlsx(inFile$datapath)
+        }
+        else if(input$analysis_type == "OMIQ"){
+            df <- readr::read_csv(inFile$datapath)
+        }
+        
         return(df)
     })
     
@@ -341,7 +347,12 @@ server = function(input, output) {
             confidenceInterval()
         )
         p <- p + geom_point(data = exclude, size = ui_data_point_size, shape = 21, fill = NA, color = 'black') +
-            coord_cartesian(xlim = plot_range$x, ylim = plot_range$y)
+            coord_cartesian(xlim = plot_range$x, ylim = plot_range$y) +
+            stat_regline_equation(data=keep, aes(x=Time, y=value,
+                                                 label =  paste(..eq.label.., ..rr.label.., sep = "~~~~")),
+                              formula = y ~ poly(x,poly_order(),raw=TRUE), 
+                              method="lm", col="red",
+                              label.x.npc="left", label.y.npc="bottom", size=ui_eqn_size)
             
         return(suppressWarnings(p))
        
@@ -675,7 +686,17 @@ server = function(input, output) {
                 confidenceInterval()
         ) +
             coord_cartesian(ylim=c(0, NA)) + 
-            scale_y_continuous(breaks=seq(0, 120, 20))
+            scale_y_continuous(breaks=seq(0, 120, 20)) +
+            stat_regline_equation(data=raw_melted_data(),
+                                  aes(x=Time, y=value,
+                                      label=paste(..eq.label..)),
+                                  formula = y ~ poly(x,poly_order(),raw=TRUE), method="lm", col="red",
+                                  label.x=0,label.y=10,size=reports_eqn_size) +
+            stat_regline_equation(data=raw_melted_data(),
+                                  aes(x=Time, y=value,
+                                      label=paste(..rr.label..)),
+                                  formula = y ~ poly(x,poly_order(),raw=TRUE), method="lm", col="red",
+                                  label.x=0,label.y=5,size=reports_eqn_size)
             # coord_cartesian(ylim = c(0,NA)) 
 
         return(suppressWarnings(p))
@@ -700,7 +721,17 @@ server = function(input, output) {
         )
         p <- p + geom_point(data = exclude, size = reports_data_point_size, shape = 21, fill = NA, color = 'black') +
             coord_cartesian(ylim=c(0, NA)) + 
-            scale_y_continuous(breaks=seq(0, 120, 20))
+            scale_y_continuous(breaks=seq(0, 120, 20)) +
+            stat_regline_equation(data=keep,
+                                  aes(x=Time, y=value,
+                                      label=paste(..eq.label..)),
+                                  formula = y ~ poly(x,poly_order(),raw=TRUE), method="lm", col="red",
+                                  label.x=0,label.y=10,size=reports_eqn_size) +
+            stat_regline_equation(data=keep,
+                                  aes(x=Time, y=value,
+                                      label=paste(..rr.label..)),
+                                  formula = y ~ poly(x,poly_order(),raw=TRUE), method="lm", col="red",
+                                  label.x=0,label.y=5,size=reports_eqn_size)
         
         return(suppressWarnings(p))
         

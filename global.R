@@ -21,7 +21,8 @@ template_data <- tibble('Time'=c(0,0.5,1,1.5,2,3,4,5),
                             'Conc_2000_ng'=rep(NA, 8)
 )
 
-regression_plot_global <- function(text_size, data_point_size, eqn_size, df, confidence_bands, order, CI){
+regression_plot_global <- function(text_size, data_point_size, eqn_size, df, confidence_bands, order, CI, eqn_location, eqn_location2){
+    
     p <- ggplot(df, aes(x=Time, y=value, color=Concentrations)) + 
             geom_ribbon(data=df, 
                         aes(x=Time, y=value, 
@@ -38,11 +39,16 @@ regression_plot_global <- function(text_size, data_point_size, eqn_size, df, con
             theme_minimal() +
             scale_color_brewer(palette = 'Dark2', na.translate = F,
                                labels = unique(df$Labels)) +
-            stat_regline_equation(data=df, 
-                                  aes(x=Time, y=value,
-                                      label=paste(..eq.label.., ..rr.label.., sep = "~~~~~~")), 
-                                  formula = y ~ poly(x,order,raw=TRUE), method="lm", col="red",
-                                  label.x.npc="center",label.y.npc="top",size=eqn_size) +
+        #     stat_regline_equation(data=df,
+        #                           aes(x=Time, y=value,
+        #                               label=paste(..eq.label..)),
+        #                           formula = y ~ poly(x,order,raw=TRUE), method="lm", col="red",
+        #                           label.x.npc="left",label.y.npc=eqn_location,size=eqn_size) +
+        # stat_regline_equation(data=df,
+        #                       aes(x=Time, y=value,
+        #                           label=paste(..rr.label..)),
+        #                       formula = y ~ poly(x,order,raw=TRUE), method="lm", col="red",
+        #                       label.x.npc="left",label.y.npc=eqn_location2,size=eqn_size) +
             theme(text=element_text(size = text_size),
                   legend.position = "bottom")
     return(suppressWarnings(p))
@@ -180,7 +186,8 @@ melt_reference_mfi_table <- function(df_full=template_data){
 
     # print('dataMelt: ')
 
-    return (dataMelt)
+    
+    return(na.omit(dataMelt))
 }
 # dotPlotData <- melt_reference_mfi_table(fullDataTable(reference_MFI_data_wide))
 
@@ -389,8 +396,12 @@ rounded_shelf_life <- function(shelf_life){
     ## 2. If a half or whole integer, still round down to next half integer
     ## 3. If 1.5yrs, don't round down
     
+    # If shelf-life is greater than 5 years, round down to 5 years to avoid extrapolation
+    if(shelf_life > 5){
+        shelf_life <- 5 # max timepoint tested
+    }
     # If shelf-life is equal to or below 1.5y, don't round down
-    if(shelf_life <= 1.5){
+    else if(shelf_life <= 1.5){
         shelf_life <- shelf_life
     }
     # If shelf-life is a whole # or half integer (ex. 4.0 or 3.5), round down to next nearest half integer
