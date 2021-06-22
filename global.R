@@ -129,6 +129,22 @@ create_modified_reference_MFI_table_wide <- function(df){
     }
     return(df2)
 }
+create_reference_MFI_table_wide_color_excludes <- function(df, keep, exclude){
+    print('KEEP')
+    print(keep)
+    print('EXCLUDE')
+    print(exclude)
+    
+    df_selected <- select(df, c(Condition, Concentration, `% 4C Reference MFI`))
+    
+    df2 <- df_selected %>% pivot_wider(names_from = Concentration, values_from = `% 4C Reference MFI`)
+    colnames(df2)[1] <- "Time"
+    for(i in c(2:length(colnames(df2)))){
+        colnames(df2)[i] <- paste0(colnames(df2)[i], " ng/test")
+    }
+    return(df2)
+}
+
 
 concentrations_to_keep <- function(reference_MFI_data_wide, columns_to_include){
     df <- reference_MFI_data_wide

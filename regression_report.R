@@ -9,7 +9,7 @@ library(nortest)
 library(ggpubr)
 library(grid)
 library(pdftools)
-
+library(gridtext)
 
 ORDER = 1 # For linear model
 CI = 0.95
@@ -25,14 +25,10 @@ EQN_SIZE = 10
 configure_stats <- function(stats, pop){
     
     stats <- stats[!is.na(stats$SI),] %>% arrange(Concentration)
-    print(stats)
-    print(pop)
-    print(stats$pop)
     stats_pop <- stats[stats$pop == pop,]
     
     stats_pop <- stats_pop %>% select(Stability.Time.point, Concentration, `%+`, `MFI+`, `MFI-`, `rSD-`)
     colnames(stats_pop)[1] <- c("Condition")
-    print(stats_pop)
     return(stats_pop)
     
 }
@@ -234,11 +230,16 @@ regression_pdf <- function(regress_plot, reference_mfi_table, shelf_life_summary
         png_plots[[i]] = grid::rasterGrob(png::readPNG(i))
     }
     
-    figure = ggarrange(
+    figure <- ggarrange(
         png_plots[[1]], ggarrange(png_plots[[2]], png_plots[[3]], ncol = 2),
         labels = c(paste0(cell_pop,"\n",marker_name, "\n", optimal)),
+        
         nrow = 2
     )
+    figure <- ggpubr::annotate_figure(figure,
+                    top = textbox_grob("Data source: \n ToothGrowth data set what if I start writing a ton of crap on here will it word wrap?", 
+                                       x = unit(0.5, "npc"), y = unit(0.7, "npc"),
+                                       hjust = 1))
     
     return(figure)
 }
@@ -305,9 +306,6 @@ build_regression_report <- function(data_path, stats_file, cell_pop, marker_name
     r_sq <- R_sq(df_melt, ORDER)
     
     # Step 9: Create plot of regression model ##
-    my_grob = grobTree(textGrob("This text stays in place!", x=0.1,  y=0.95, hjust=0,
-                                gp=gpar(col="blue", fontsize=15, fontface="italic")))
-    
     regress_plot <- regression_plot_global(FONT_SIZE, DATA_PT_SIZE, EQN_SIZE, df_melt, bands, ORDER, CI, 0.1, 0.2)  +
         coord_cartesian(ylim=c(0, NA)) + 
         scale_y_continuous(breaks=seq(0, 120, 20)) +
@@ -488,15 +486,14 @@ build_regression_report_gui <- function(stats_file, cell_pop, marker_name, optim
 build_regression_report_gui_modified <- function(df_melt, order, ci, threshold_mfi, stats_file, cell_pop, marker_name, optimal){
 
     df <- get_stats_table_for_mfi_table(stats_file, cell_pop)
-    print(df_melt)
+    
     df_melt <- na.omit(df_melt)
-    print(df_melt)
+    
     ## Step 4: Create linear regression model ##
     fit_summary <- best_fit_equation(df_melt, order)
     print("step 3")
     ## Step 5: Add lower 95% Confidence Intervals ##
     bands <- find_confidence_bands(df_melt, order, ci, threshold_mfi)
-    print(bands)
     print("step 4")
     ## Step 6: Calculate predicted shelf-life ##
     lower_shelf_life <- solve_for_lower_shelf_life(df_melt, order, ci, threshold_mfi)

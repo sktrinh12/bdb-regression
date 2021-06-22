@@ -798,9 +798,27 @@ server = function(input, output) {
             "regression_report_output.pdf"
         },
         content = function(file){
-            create_regression_report_modified()
+            build_regression_report_gui_modified(
+                keep(),
+                poly_order(),
+                as.numeric(input$CI),
+                as.numeric(input$threshold),
+                input$raw_upload$datapath,
+                input$cell_pop_input, 
+                "CD20 X40", 
+                "optimal=2mg/ml")
+            while (!is.null(dev.list()))  dev.off()
         }
     )
+    
+    kept_excluded <- reactive({
+        print(create_reference_MFI_table_wide_color_excludes(raw_upload_data_with_perct_MFI(), keep(), exclude()))
+    })
+    output$kept_excluded_table <- renderDataTable({ 
+        req(input$raw_upload)
+        # kept_excluded() 
+        exclude()
+    })
     
     ######################## RESIDUAL PLOTS ###################################
     ########################## Powerpoint Output ##############################

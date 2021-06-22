@@ -60,7 +60,10 @@ ui = tagList(
                          tabPanel("Stats Table",
                                   br(),
                                   DT::dataTableOutput("reference_mfi_data_table"),
-                                  br()
+                                  br(),
+                                  # DT::dataTableOutput("kept_excluded_table"),
+                                  
+                                  
 
                                   
                          ),tabPanel("Plots",
