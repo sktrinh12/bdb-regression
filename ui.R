@@ -30,6 +30,7 @@ ui = tagList(
                      div(style = " overflow-x: scroll;",
                          radioButtons("analysis_type","Select Manual or OMIQ Analysis", choices = c("Manual", "OMIQ"), inline=TRUE),
                          uiOutput('manual_or_omiq'),
+                         uiOutput('cell_pop_ui'),
                          # div(style = "display: grid; grid-template-columns: 250px 250px;",
                          #     div(style = "padding:5px;", downloadButton("download_template_file", "Download Stats Template")),
                          #     div(style = "padding:5px;", downloadButton("downloadExample", "Download Stats Example"))),
@@ -50,7 +51,8 @@ ui = tagList(
                          div(textInput("filename_output", "Name Final PPT", placeholder = "Exclude .pptx")),
                          div(style = "display: flex; align-items: center; justify-content: center; padding-top: 10px", 
                             downloadButton("pptx_id", "Download PPT", class = "btn-primary"))),
-                     br()
+                     br(),
+                     downloadButton("regression_report", "Download OMIQ Regression Report", class = "btn-primary")
                      )
                  ),
                  mainPanel(

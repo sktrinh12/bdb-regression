@@ -67,7 +67,12 @@ server = function(input, output) {
         }
         
     })
-    
+    output$cell_pop_ui <- renderUI({
+        req(input$raw_upload)
+        selectInput('cell_pop_input', "Select Cell Population", choices = c(unique(
+            readr::read_csv(input$raw_upload$datapath)$pop
+            )))
+    })
     # Download Template Stats File
     output$downloadData <- downloadHandler(
         filename = 'stability_stats_template.csv',
@@ -109,7 +114,7 @@ server = function(input, output) {
         inFile <- input$raw_upload
         if(is.null(inFile))
             return(NULL)
-        if(input$analysis_type == "Manual"){
+        else if(input$analysis_type == "Manual"){
             df <- readxl::read_xlsx(inFile$datapath)
         }
         else if(input$analysis_type == "OMIQ"){
@@ -121,24 +126,10 @@ server = function(input, output) {
     })
     
     ## Step 2: Calculate % of 4C Reference MFI Data
-    
     raw_upload_data_with_perct_MFI <- reactive({
         req(input$raw_upload)
-        # if(input$analysis_type == "Manual"){
-        #     df <- calculate_perct_4C_MFI(raw_upload_data())
-        #     
-        # }
-        # else if(input$analysis_type == "OMIQ"){
-        #     
-        #     df <- calculate_perct_4C_MFI(df)
-        # }
         calculate_perct_4C_MFI(raw_upload_data())
-        # return(df)
     })
-    # raw_upload_data_with_perct_MFI <- reactive({
-    #     req(input$raw_upload)
-    #     calculate_perct_4C_MFI(raw_upload_data())
-    # })
     
     
     ## Step 3: Create plots for all stats
@@ -770,6 +761,46 @@ server = function(input, output) {
         ))
     })
     final_name <- reactive({ as.character(paste0(input$filename_output, ".pptx")) })
+    
+    create_regression_report <- reactive({
+        req(input$raw_upload)
+        
+        validate(
+            need(input$cell_pop_input != "", "Wait for cell population list to load") # display custom message in need
+        )
+        build_regression_report_gui(
+                                input$raw_upload$datapath, 
+                                input$cell_pop_input, 
+                                "CD20 X40", 
+                                "optimal=2mg/ml")
+        
+    })
+    
+    create_regression_report_modified <- reactive({
+        req(input$raw_upload)
+        
+        validate(
+            need(input$cell_pop_input != "", "Wait for cell population list to load") # display custom message in need
+        )
+        build_regression_report_gui_modified(
+            keep(),
+            poly_order(),
+            as.numeric(input$CI),
+            as.numeric(input$threshold),
+            input$raw_upload$datapath,
+            input$cell_pop_input, 
+            "CD20 X40", 
+            "optimal=2mg/ml")
+    })
+    
+    output$regression_report <- downloadHandler(
+        filename = function(){
+            "regression_report_output.pdf"
+        },
+        content = function(file){
+            create_regression_report_modified()
+        }
+    )
     
     ######################## RESIDUAL PLOTS ###################################
     ########################## Powerpoint Output ##############################

@@ -25,6 +25,9 @@ EQN_SIZE = 10
 configure_stats <- function(stats, pop){
     
     stats <- stats[!is.na(stats$SI),] %>% arrange(Concentration)
+    print(stats)
+    print(pop)
+    print(stats$pop)
     stats_pop <- stats[stats$pop == pop,]
     
     stats_pop <- stats_pop %>% select(Stability.Time.point, Concentration, `%+`, `MFI+`, `MFI-`, `rSD-`)
@@ -402,4 +405,162 @@ build_regression_report_per_cell_pop <- function(data_path, stats_file){
     
     all_regression_reports <- pdf_combine(regression_report_filename_list, output = "all_reports.pdf")
     merge_full_stability_report(data_path, regression_report_filename_list, all_regression_reports)
+}
+
+build_regression_report_gui <- function(stats_file, cell_pop, marker_name, optimal){
+    
+    print(keep)
+    ## Step 1: Upload raw stats ##
+    df <- get_stats_table_for_mfi_table(stats_file, cell_pop)
+    print("step 1")
+    ## Step 3b: Transform % of 4C Reference MFI data to long ##
+    df_melt <- melt_reference_mfi_table(df)
+    print("step 2")
+    ## Step 4: Create linear regression model ##
+    fit_summary <- best_fit_equation(df_melt, ORDER)
+    print("step 3")
+    ## Step 5: Add lower 95% Confidence Intervals ##
+    bands <- find_confidence_bands(df_melt, ORDER, CI, THRESHOLD_MFI)
+    print("step 4")
+    ## Step 6: Calculate predicted shelf-life ##
+    lower_shelf_life <- solve_for_lower_shelf_life(df_melt, ORDER, CI, THRESHOLD_MFI)
+    print("step 5")
+    shelf_life <- solve_for_shelf_life(df_melt, THRESHOLD_MFI, ORDER)
+    print("step 6")
+    ## Step 7: Calculate model p-value ##
+    p_value <- polynomial_evaluation_of_linearity(df_melt, ORDER)
+    print("step 7")
+    ## Step 8: Calculated R^2 value ##
+    r_sq <- R_sq(df_melt, ORDER)
+    print("step 8")
+    # Step 9: Create plot of regression model ##
+    my_grob = grobTree(textGrob("This text stays in place!", x=0.1,  y=0.95, hjust=0,
+                                gp=gpar(col="blue", fontsize=15, fontface="italic")))
+    
+    regress_plot <- regression_plot_global(FONT_SIZE, DATA_PT_SIZE, EQN_SIZE, df_melt, bands, ORDER, CI, 0.1, 0.2)  +
+        coord_cartesian(ylim=c(0, NA)) + 
+        scale_y_continuous(breaks=seq(0, 120, 20)) +
+        stat_regline_equation(data=df_melt,
+                              aes(x=Time, y=value,
+                                  label=paste(..eq.label..)),
+                              formula = y ~ poly(x,ORDER,raw=TRUE), method="lm", col="red",
+                              label.x=0,label.y=10,size=12) +
+        stat_regline_equation(data=df_melt,
+                              aes(x=Time, y=value,
+                                  label=paste(..rr.label..)),
+                              formula = y ~ poly(x,ORDER,raw=TRUE), method="lm", col="red",
+                              label.x=0,label.y=5,size=12)
+    # annotation_custom(my_grob) +
+    # stat_cor(label.x = 1, label.y = 20, size=12) +
+    # stat_regline_equation(label.x = 1, label.y = 10, size=24)
+    print("step 9")
+    
+    residuals <- find_residuals(df_melt, ORDER)
+    print("step 10")
+    ## Step 10: Create residual vs fit plot ##
+    resid_plot <- residual_vs_fit_plot(df_melt, ORDER, FONT_SIZE, DATA_PT_SIZE)
+    print("step 11")
+    ## Step 11: Create normal probability plot of residuals ##
+    normal_prob_plot <- normal_probability_plot(df_melt, ORDER, residuals, FONT_SIZE, DATA_PT_SIZE)
+    print("step 12")
+    ## Step 12: Create histogram of residuals ##
+    resid_histogram <- residual_histogram(df_melt, ORDER, FONT_SIZE)
+    print("step 13")
+    normality_p_value <- anderson_darling_normality_test(residuals)
+    print("step 14")
+    shelf_life_df <- create_shelf_life_summary_table(lower_shelf_life, r_sq, p_value)
+    print("step 15")
+    shelf_life_summary_png <- shelf_life_estimates_table_png(read_csv(stats_file, col_types = cols()), shelf_life_df, p_value$b_pvalue, lower_shelf_life, r_sq)
+    print("step 16")
+    reference_mfi_table_png <- perc_4C_mfi_table_png(df)
+    print("step 17")
+    normality_pvalue_png <- anderson_darling_p_value_png(normality_p_value)
+    print("step 18")
+    pdf(paste0("regression_report_",cell_pop, ".pdf"), title="Regression for Stability", width = 16, height = 10, onefile = TRUE)
+    
+    print(regression_pdf(regress_plot, reference_mfi_table_png, shelf_life_summary_png, cell_pop, marker_name, optimal))
+    print(quality_checks_pdf(resid_plot, resid_histogram, normal_prob_plot, normality_pvalue_png))
+    print("Building regression report for Lymphs...")
+    dev.off()
+    print("Report complete.")
+}
+
+build_regression_report_gui_modified <- function(df_melt, order, ci, threshold_mfi, stats_file, cell_pop, marker_name, optimal){
+
+    df <- get_stats_table_for_mfi_table(stats_file, cell_pop)
+    print(df_melt)
+    df_melt <- na.omit(df_melt)
+    print(df_melt)
+    ## Step 4: Create linear regression model ##
+    fit_summary <- best_fit_equation(df_melt, order)
+    print("step 3")
+    ## Step 5: Add lower 95% Confidence Intervals ##
+    bands <- find_confidence_bands(df_melt, order, ci, threshold_mfi)
+    print(bands)
+    print("step 4")
+    ## Step 6: Calculate predicted shelf-life ##
+    lower_shelf_life <- solve_for_lower_shelf_life(df_melt, order, ci, threshold_mfi)
+    print("step 5")
+    shelf_life <- solve_for_shelf_life(df_melt, threshold_mfi, order)
+    print("step 6")
+    ## Step 7: Calculate model p-value ##
+    p_value <- polynomial_evaluation_of_linearity(df_melt, order)
+    print("step 7")
+    ## Step 8: Calculated R^2 value ##
+    r_sq <- R_sq(df_melt, order)
+    print("step 8")
+    # Step 9: Create plot of regression model ##
+    my_grob = grobTree(textGrob("This text stays in place!", x=0.1,  y=0.95, hjust=0,
+                                gp=gpar(col="blue", fontsize=15, fontface="italic")))
+    
+    regress_plot <- regression_plot_global(FONT_SIZE, DATA_PT_SIZE, EQN_SIZE, df_melt, bands, order, ci, 0.1, 0.2)  +
+        coord_cartesian(ylim=c(0, NA)) + 
+        scale_y_continuous(breaks=seq(0, 120, 20)) +
+        stat_regline_equation(data=df_melt,
+                              aes(x=Time, y=value,
+                                  label=paste(..eq.label..)),
+                              formula = y ~ poly(x,order,raw=TRUE), method="lm", col="red",
+                              label.x=0,label.y=10,size=12) +
+        stat_regline_equation(data=df_melt,
+                              aes(x=Time, y=value,
+                                  label=paste(..rr.label..)),
+                              formula = y ~ poly(x,order,raw=TRUE), method="lm", col="red",
+                              label.x=0,label.y=5,size=12)
+    
+    # annotation_custom(my_grob) +
+    # stat_cor(label.x = 1, label.y = 20, size=12) +
+    # stat_regline_equation(label.x = 1, label.y = 10, size=24)
+    print("step 9")
+    
+    residuals <- find_residuals(df_melt, order)
+    print("step 10")
+    ## Step 10: Create residual vs fit plot ##
+    resid_plot <- residual_vs_fit_plot(df_melt, order, FONT_SIZE, DATA_PT_SIZE)
+    print("step 11")
+    ## Step 11: Create normal probability plot of residuals ##
+    normal_prob_plot <- normal_probability_plot(df_melt, order, residuals, FONT_SIZE, DATA_PT_SIZE)
+    print("step 12")
+    ## Step 12: Create histogram of residuals ##
+    resid_histogram <- residual_histogram(df_melt, order, FONT_SIZE)
+    print("step 13")
+    normality_p_value <- anderson_darling_normality_test(residuals)
+    print("step 14")
+    shelf_life_df <- create_shelf_life_summary_table(lower_shelf_life, r_sq, p_value)
+    print("step 15")
+    shelf_life_summary_png <- shelf_life_estimates_table_png(read_csv(stats_file, col_types = cols()), shelf_life_df, p_value$b_pvalue, lower_shelf_life, r_sq)
+    print("step 16")
+    reference_mfi_table_png <- perc_4C_mfi_table_png(df)
+    print("step 17")
+    normality_pvalue_png <- anderson_darling_p_value_png(normality_p_value)
+    print("step 18")
+    pdf(paste0("regression_report_",cell_pop, ".pdf"), title="Regression for Stability", width = 16, height = 10, onefile = TRUE)
+    print("step 19")
+    print(regression_pdf(regress_plot, reference_mfi_table_png, shelf_life_summary_png, cell_pop, marker_name, optimal))
+    print("step 20")
+    print(quality_checks_pdf(resid_plot, resid_histogram, normal_prob_plot, normality_pvalue_png))
+    cat(paste("Making regression report for", cell_pop, "\n"))
+    dev.off()
+    cat("Report complete.")
+    
+    
 }
