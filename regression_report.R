@@ -240,6 +240,7 @@ regression_pdf <- function(regress_plot, reference_mfi_table, shelf_life_summary
                                       bottom = text_grob(notes, hjust = 1))
     return(figure)
 }
+
 quality_checks_pdf <- function(resid_plot, resid_histogram, normal_prob_plot, normality_table){
     
     # Create residuals vs fit plot png
@@ -275,7 +276,7 @@ quality_checks_pdf <- function(resid_plot, resid_histogram, normal_prob_plot, no
     return(figure)
 }
 
-
+## Build individual regression report for cell population
 build_regression_report <- function(data_path, stats_file, cell_pop, marker_name, optimal, notes){
     
     
@@ -350,6 +351,7 @@ build_regression_report <- function(data_path, stats_file, cell_pop, marker_name
 }
 # build_regression_report("all_stats_new_wellids.csv", "Lymph")
 
+## Merge with full_stability_report.pdf from OMIQ output
 merge_full_stability_report <- function(data_path, report_filename_list, all_regression_reports){
     
     omiq_stability_report <- file.path(data_path, "full_stability_report.pdf")
@@ -378,6 +380,7 @@ merge_full_stability_report <- function(data_path, report_filename_list, all_reg
     invisible(file.remove(c(title_page_output, omiq_stability_subset_output, all_regression_reports, report_filename_list)))
 }
 
+## Bundle individual regression reports for all cell populations with full_stability_report.pdf from OMIQ
 build_regression_report_per_cell_pop <- function(data_path, stats_file){
     stats_file <- file.path(data_path, stats_file)
     
@@ -402,84 +405,57 @@ build_regression_report_per_cell_pop <- function(data_path, stats_file){
     merge_full_stability_report(data_path, regression_report_filename_list, all_regression_reports)
 }
 
-build_regression_report_gui <- function(stats_file, cell_pop, marker_name, optimal, notes){
-    
-    print(keep)
-    ## Step 1: Upload raw stats ##
-    df <- get_stats_table_for_mfi_table(stats_file, cell_pop)
-    print("step 1")
-    ## Step 3b: Transform % of 4C Reference MFI data to long ##
-    df_melt <- melt_reference_mfi_table(df)
-    print("step 2")
-    ## Step 4: Create linear regression model ##
-    fit_summary <- best_fit_equation(df_melt, ORDER)
-    print("step 3")
-    ## Step 5: Add lower 95% Confidence Intervals ##
-    bands <- find_confidence_bands(df_melt, ORDER, CI, THRESHOLD_MFI)
-    print("step 4")
-    ## Step 6: Calculate predicted shelf-life ##
-    lower_shelf_life <- solve_for_lower_shelf_life(df_melt, ORDER, CI, THRESHOLD_MFI)
-    print("step 5")
-    shelf_life <- solve_for_shelf_life(df_melt, THRESHOLD_MFI, ORDER)
-    print("step 6")
-    ## Step 7: Calculate model p-value ##
-    p_value <- polynomial_evaluation_of_linearity(df_melt, ORDER)
-    print("step 7")
-    ## Step 8: Calculated R^2 value ##
-    r_sq <- R_sq(df_melt, ORDER)
-    print("step 8")
-    # Step 9: Create plot of regression model ##
-    my_grob = grobTree(textGrob("This text stays in place!", x=0.1,  y=0.95, hjust=0,
-                                gp=gpar(col="blue", fontsize=15, fontface="italic")))
-    
-    regress_plot <- regression_plot_global(FONT_SIZE, DATA_PT_SIZE, EQN_SIZE, df_melt, bands, ORDER, CI, 0.1, 0.2)  +
-        coord_cartesian(ylim=c(0, NA)) + 
-        scale_y_continuous(breaks=seq(0, 120, 20)) +
-        stat_regline_equation(data=df_melt,
-                              aes(x=Time, y=value,
-                                  label=paste(..eq.label..)),
-                              formula = y ~ poly(x,ORDER,raw=TRUE), method="lm", col="red",
-                              label.x=0,label.y=10,size=12) +
-        stat_regline_equation(data=df_melt,
-                              aes(x=Time, y=value,
-                                  label=paste(..rr.label..)),
-                              formula = y ~ poly(x,ORDER,raw=TRUE), method="lm", col="red",
-                              label.x=0,label.y=5,size=12)
-    # annotation_custom(my_grob) +
-    # stat_cor(label.x = 1, label.y = 20, size=12) +
-    # stat_regline_equation(label.x = 1, label.y = 10, size=24)
-    print("step 9")
-    
-    residuals <- find_residuals(df_melt, ORDER)
-    print("step 10")
-    ## Step 10: Create residual vs fit plot ##
-    resid_plot <- residual_vs_fit_plot(df_melt, ORDER, FONT_SIZE, DATA_PT_SIZE)
-    print("step 11")
-    ## Step 11: Create normal probability plot of residuals ##
-    normal_prob_plot <- normal_probability_plot(df_melt, ORDER, residuals, FONT_SIZE, DATA_PT_SIZE)
-    print("step 12")
-    ## Step 12: Create histogram of residuals ##
-    resid_histogram <- residual_histogram(df_melt, ORDER, FONT_SIZE)
-    print("step 13")
-    normality_p_value <- anderson_darling_normality_test(residuals)
-    print("step 14")
-    shelf_life_df <- create_shelf_life_summary_table(lower_shelf_life, r_sq, p_value)
-    print("step 15")
-    shelf_life_summary_png <- shelf_life_estimates_table_png(read_csv(stats_file, col_types = cols()), shelf_life_df, p_value$b_pvalue, lower_shelf_life, r_sq)
-    print("step 16")
-    reference_mfi_table_png <- perc_4C_mfi_table_png(df)
-    print("step 17")
-    normality_pvalue_png <- anderson_darling_p_value_png(normality_p_value)
-    print("step 18")
-    pdf(paste0("regression_report_",cell_pop, ".pdf"), title="Regression for Stability", width = 16, height = 10, onefile = TRUE)
-    
-    print(regression_pdf(regress_plot, reference_mfi_table_png, shelf_life_summary_png, cell_pop, marker_name, optimal, notes))
-    print(quality_checks_pdf(resid_plot, resid_histogram, normal_prob_plot, normality_pvalue_png))
-    print("Building regression report for Lymphs...")
-    dev.off()
-    print("Report complete.")
+get_marker_name <- function(stats_file){
+    stats_df <- read_csv(stats_file, col_types = cols())
+    print(stats_df)
+    marker_name <- paste(unique(stats_df$Target.Species), 
+                         unique(stats_df$Specificity..CD.), 
+                         unique(stats_df$Clone), 
+                         unique(stats_df$Fluorochrome))
+    return(marker_name)
 }
-
+regression_gui_title_page = function(cell_pop, marker_name, order, ci, mfi_threshold, notes) {
+    
+    ## Marker info
+    cell_pop = cell_pop
+    marker = marker_name
+    
+    if(order == 1){
+        polynomial_order <- "Linear"
+    }
+    else if(order == 2){
+        polynomial_order <- "2nd Order"
+    }
+    else if(order == 3){
+        polynomial_order <- "3rd Order"
+    }
+    
+    ## Regression Parameter Info
+    polynomial_order = polynomial_order
+    confidence_interval = ci
+    mfi_threshold = mfi_threshold
+    notes = notes
+    
+    # get plot lists
+    plot_0 = list(ggpubr::text_grob("Post-Review Regression Analysis", color = "deepskyblue3", face = "bold", size = 25))
+    plot_1 = list(ggpubr::text_grob(paste("Cell Population:", cell_pop, "\n",
+                                          "Marker Name:", marker_name, "\n"), 
+                                    color = "deepskyblue3", face = "bold"))
+    
+    plot_2 = list(ggpubr::text_grob(paste0("Parameters Selected from App:", "\n",
+                                           "Polynomial Order: ", polynomial_order, "\n",
+                                           "Confidence Interval: ", as.numeric(ci)*100, "%", "\n",
+                                           "MFI Threshold: ", mfi_threshold, "%", "\n",
+                                           notes), color = "grey25", face = "plain")
+    )
+    
+    
+    # assemble plot
+    plots = c(plot_0, plot_1, plot_2)
+    figure = ggpubr::ggarrange(plotlist=plots, nrow = 3)
+    
+    figure
+}
 build_regression_report_gui_modified <- function(df_melt, order, ci, threshold_mfi, stats_file, cell_pop, marker_name, optimal, notes){
 
     df <- get_stats_table_for_mfi_table(stats_file, cell_pop)
@@ -562,68 +538,11 @@ build_regression_report_gui_modified <- function(df_melt, order, ci, threshold_m
 }
 
 
-regression_gui_title_page = function(cell_pop, marker_name, order, ci, mfi_threshold, notes) {
-    
-    # get all required details
-    cell_pop = cell_pop
-    marker = marker_name
-    # clone = as.character(unique(settings$Clone)[1])
-    # fluor = unique(settings$Fluorochrome)[1]
-    # batch = unique(settings$Batch.Number)[1]
-    if(order == 1){
-        polynomial_order <- "Linear"
-    }
-    else if(order == 2){
-        polynomial_order <- "2nd Order"
-    }
-    else if(order == 3){
-        polynomial_order <- "3rd Order"
-    }
-    polynomial_order = polynomial_order
-    confidence_interval = ci
-    mfi_threshold = mfi_threshold
-    notes = notes
-    # pop_specs_all = list()
-    # if (rd$spec[[markerXrow]][["disabled"]] == FALSE){
-    #     for (i in 1:length(POP_NAMES)){
-    #         spec_min = rd$spec[[markerXrow]][[POP_NAMES[i]]]$min
-    #         spec_max = rd$spec[[markerXrow]][[POP_NAMES[i]]]$max
-    #         pop_specs_all[i] = paste0(POP_NAMES[i], " range = ", spec_min, "-", spec_max,"%")
-    #     }
-    #     pop_specs = paste(unlist(pop_specs_all), collapse = " ")
-    # } else {
-    #     pop_specs = "No spec given"
-    # }
-    # get plot lists
-    plot_0 = list(ggpubr::text_grob("Post-Review Regression Analysis", color = "deepskyblue3", face = "bold", size = 25))
-    plot_1 = list(ggpubr::text_grob(paste("Cell Population:", cell_pop, "\n",
-                                          "Marker Name:", marker_name, "\n"
-                                          # "Clone:", clone, "\n",
-                                          # "Fluorochrome:", fluor, "\n",
-                                          # "Batch #:", batch
-                                          ), color = "deepskyblue3", face = "bold"))
-    # plot_2 = list(ggpubr::text_grob(paste0("Parameters Selected from App", "\n"), color = "deepskyblue3", face = "italic", size = 18),
-    plot_2 = list(ggpubr::text_grob(paste0("Parameters Selected from App:", "\n",
-                                           "Polynomial Order: ", polynomial_order, "\n",
-                                           "Confidence Interval: ", as.numeric(ci)*100, "%", "\n",
-                                           "MFI Threshold: ", mfi_threshold, "%", "\n",
-                                           notes), color = "grey25", face = "plain")
-                  )
-    # plot_2 = list(ggpubr::text_grob(paste0("Parameters Selected from App", "\n",
-    #                                        "Polynomial Order: ", polynomial_order, "\n",
-    #                                        "Confidence Interval: ", as.numeric(ci)*100, "%", "\n",
-    #                                        "MFI Threshold: ", mfi_threshold, "%", "\n",
-    #                                        notes), color = "grey25", face = "plain"))
-    # plot_3 = list(ggpubr::text_grob(pop_specs, color = "grey25", face = "plain"))
-    
-    # assemble plot
-    plots = c(plot_0, plot_1, plot_2)
-    figure = ggpubr::ggarrange(plotlist=plots, nrow = 3)
-    
-    figure
-}
+
 
 merged_pdfs_for_gui <- function(regr_report, uploaded_report){
     
     pdf_combine(c(regr_report, uploaded_report), output = "final_regression_report_post_review.pdf")
 }
+
+

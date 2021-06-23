@@ -16,11 +16,11 @@ library(tibble)
 library(reshape2)
 library(nortest)
 library(ggpubr)
+library(shinyjs)
 
 source('global.R')
 
 ui = tagList(
-    # shinythemes::themeSelector(),
     navbarPage(
         theme = shinytheme("journal"),  # <--- To use a theme, uncomment this
         "Regression for Stability",
@@ -30,34 +30,20 @@ ui = tagList(
                      div(style = " overflow-x: scroll;",
                          radioButtons("analysis_type","Select Manual or OMIQ Analysis", choices = c("Manual", "OMIQ"), inline=TRUE),
                          uiOutput('manual_or_omiq'),
-                         uiOutput('cell_pop_ui'),
-                         # div(style = "display: grid; grid-template-columns: 250px 250px;",
-                         #     div(style = "padding:5px;", downloadButton("download_template_file", "Download Stats Template")),
-                         #     div(style = "padding:5px;", downloadButton("downloadExample", "Download Stats Example"))),
-                         # br(),
-                         # div(style = "display: grid; grid-template-columns: auto;",
-                         #     fileInput("raw_upload","Choose stats file to upload",
-                         #     accept = c('text/xlsx',
-                         #                '.xlsx'))), 
+                         
                      
-                     fluidRow(column(12,radioButtons('polynomial_order','Order of Polynomial', choices=c("Linear","2nd Order", "3rd Order"), selected="Linear", inline=TRUE))),
-                     fluidRow(uiOutput('warning_ui_polynomial_choice')),
-                     br(),
-                     selectInput('CI', 'Confidence Interval', choices=c(0.85, 0.90, 0.95, 0.99), selected = 0.95),
-                     textInput('threshold', '% of 4C Reference MFI Threshold', value=75),
-                     uiOutput('concentration_checkGroupInput'),
-                     br(),
-                     div(style = "display: grid; grid-template-columns: 250px 250px; padding: 5px;",
-                         div(textInput("filename_output", "Name Final PPT", placeholder = "Exclude .pptx")),
-                         div(style = "display: flex; align-items: center; justify-content: center; padding-top: 10px", 
-                            downloadButton("pptx_id", "Download PPT", class = "btn-primary"))),
-                     br(),
-                     downloadButton("regression_report", "Download Indiv. Regression Report", class = "btn-primary"),
-                     br(),
-                     br(),
-                     fileInput('regression_reports_indiv', "Upload generated regression report", multiple = TRUE, accept = c('.pdf')),
-                     br(),
-                     downloadButton("regression_report_bundled", "Download Bundled Regression Report", class = "btn-secondary")
+                         fluidRow(column(12,
+                                         radioButtons('polynomial_order','Order of Polynomial', 
+                                                      choices=c("Linear","2nd Order", "3rd Order"), 
+                                                      selected="Linear", inline=TRUE))),
+                         fluidRow(column(12,uiOutput('warning_ui_polynomial_choice'))),
+                         br(),
+                         selectInput('CI', 'Confidence Interval', choices=c(0.85, 0.90, 0.95, 0.99), selected = 0.95),
+                         textInput('threshold', '% of 4C Reference MFI Threshold', value=75),
+                         uiOutput('concentration_checkGroupInput'),
+                         br(),
+                         br(),
+                         uiOutput("omiq_report_bundle_ui")
                      )
                  ),
                  mainPanel(
@@ -65,12 +51,8 @@ ui = tagList(
                          tabPanel("Stats Table",
                                   br(),
                                   DT::dataTableOutput("reference_mfi_data_table"),
-                                  br(),
-                                  # DT::dataTableOutput("kept_excluded_table"),
-                                  
-                                  
-
-                                  
+                                  br()
+                                  # DT::dataTableOutput("kept_excluded_table")      
                          ),tabPanel("Plots",
                                     br(),
                                     fluidRow(column(6,plotOutput('mfi_vs_concentration')),
@@ -104,13 +86,13 @@ ui = tagList(
                                   fluidRow(column(
                                       6,wellPanel(
                                               h4(p(strong(
-                                                  "Predicted Shelf-Life"
+                                                  "Predicted Shelf-Life (Raw)"
                                               ))),
-                                              uiOutput('check_shelf_life'),
-                                              h4(p(
-                                                  strong("Predicted Shelf-Life w/ 95% Confidence")
-                                              )),
                                               uiOutput('check_lower_shelf_life'),
+                                              h4(p(
+                                                  strong("Predicted Shelf-Life (Rounded)")
+                                              )),
+                                              uiOutput('check_rounded_shelf_life'),
                                               h4(p(
                                                   strong("Model Coefficient P-value")
                                               )),
@@ -143,10 +125,6 @@ ui = tagList(
                                            br(),
                                            uiOutput('warning_normality_pvalue')
                                            )))
-                                  # br(),
-                                  # wellPanel(h3('Summary of Results'),
-                                  #           br(),
-                                  #           tableOutput('results_table'))
                                   
                          ) #end of Residuals tab panel
                      )

@@ -1,6 +1,6 @@
 source('global.R')
 source('regression_report.R')
-wave_summary_file <- "wave5_summary.xlsx"
+
 mypptx <- read_pptx("bd_template_homemade.pptx")
 
 ## CONSTANTS
@@ -49,30 +49,81 @@ server = function(input, output) {
                                               inline = TRUE)
                         ))
                     )
-        }
-        else{
+        } else{
             tagList(
                 fileInput(
                     "raw_upload",
                     "Choose stats file to upload",
                     accept = c('text/csv',
-                               '.csv')
-                ),
+                               '.csv')),
+                    br(),
+                    uiOutput('cell_pop_ui')
+                )
+            
+        }
+        
+    })
+    
+    output$omiq_report_bundle_ui <- renderUI({
+        if(input$analysis_type == "Manual"){
+            tagList(div(style = "display: grid; grid-template-columns: 250px 250px; padding: 5px;",
+                        div(textInput("filename_output", "Name Final PPT", placeholder = "Exclude .pptx")),
+                        div(style = "display: flex; align-items: center; justify-content: center; padding-top: 10px", 
+                            downloadButton("pptx_id", "Download PPT", class = "btn-primary"))),
+            )
+        }
+        else{
+            tagList(
+                downloadButton("regression_report", "Download Individual Regression Report", class = "btn-primary"),
+                # uiOutput('download_final_reports_ui'),
+                # conditionalPanel(
+                #     condition = "input.regression_report != 0", 
+                #     tagList(
+                br(),
+                br(),
+                fileInput('regression_reports_indiv', "Upload Individual Regression Report", multiple = TRUE, accept = c('.pdf')),
+                
                 fileInput(
                     "omiq_report_upload",
                     "Upload OMIQ Stability Report",
                     accept = c(".pdf")
-                )
+                ),
+                downloadButton("regression_report_bundled", "Download Bundled Regression Report", class = "btn-primary"),
+                br()
+                    # )
+                # )
+                # br(),
+                # br(),
+                # fileInput('regression_reports_indiv', "Upload generated regression report", multiple = TRUE, accept = c('.pdf')),
+                # fileInput(
+                #     "omiq_report_upload",
+                #     "Upload OMIQ Stability Report",
+                #     accept = c(".pdf")
+                # ),
+                # downloadButton("regression_report_bundled", "Download Bundled Regression Report", class = "btn-secondary")
             )
         }
-        
     })
-    output$cell_pop_ui <- renderUI({
-        req(input$raw_upload)
-        selectInput('cell_pop_input', "Select Cell Population", choices = c(unique(
-            readr::read_csv(input$raw_upload$datapath)$pop
-            )))
+    
+    output$download_final_reports_ui <- renderUI({
+        conditionalPanel(
+        condition = "input.regression_report > '0'", 
+            tagList(
+                br(),
+                br(),
+                fileInput('regression_reports_indiv', "Upload generated regression report", multiple = TRUE, accept = c('.pdf')),
+                fileInput(
+                    "omiq_report_upload",
+                    "Upload OMIQ Stability Report",
+                    accept = c(".pdf")
+                ),
+                downloadButton("regression_report_bundled", "Download Bundled Regression Report", class = "btn-secondary")
+            )
+        )
     })
+    
+    
+    
     # Download Template Stats File
     output$downloadData <- downloadHandler(
         filename = 'stability_stats_template.csv',
@@ -124,6 +175,7 @@ server = function(input, output) {
         
         return(df)
     })
+    
     
     ## Step 2: Calculate % of 4C Reference MFI Data
     raw_upload_data_with_perct_MFI <- reactive({
@@ -343,7 +395,6 @@ server = function(input, output) {
         exclude <- selected_melted_data()[!vals$keeprows, , drop = FALSE]
         keep <- keep[complete.cases(keep),]
         
-        
         p <- regression_plot_global(
             ui_font_size,
             ui_data_point_size,
@@ -399,9 +450,9 @@ server = function(input, output) {
     })
     
     ## Step 7b: Output shelf-life to UI
-    output$check_shelf_life <- renderUI({
+    output$check_lower_shelf_life <- renderUI({
         req(input$raw_upload)
-        if(is.null(shelf_life())){
+        if(is.null(lower_shelf_life())){
             tags$i(" Does not intersect with MFI Threshold - No Shelf-life can be found",
                    class = "fa fa-times-circle", 
                    style = "color: red; font-size: 20px;"
@@ -414,9 +465,9 @@ server = function(input, output) {
             )
         }
     })
-    output$check_lower_shelf_life <- renderUI({
+    output$check_rounded_shelf_life <- renderUI({
         req(input$raw_upload)
-        if(is.null(lower_shelf_life())){
+        if(is.null(rounded_modified_lower_shelf_life())){
             tags$i(" Does not intersect with MFI Threshold - No Shelf-life can be found",
                    class = "fa fa-times-circle", 
                    style = "color: red; font-size: 20px;"
@@ -762,18 +813,32 @@ server = function(input, output) {
     })
     final_name <- reactive({ as.character(paste0(input$filename_output, ".pptx")) })
     
-    create_regression_report <- reactive({
+    marker_name <- reactive({
+        get_marker_name(input$raw_upload$datapath)
+    })
+    
+    output$marker_name_output <- renderText({
+        marker_name()
+        # div(style="display: inline", p(span(style="color:blue; font-weight:bold","Marker Name: "), marker_name()))
+    })
+    
+    output$cell_pop_ui <- renderUI({
         req(input$raw_upload)
-        
-        validate(
-            need(input$cell_pop_input != "", "Wait for cell population list to load") # display custom message in need
+        tagList(
+            tags$head(tags$style("
+                  #marker_name_output{
+                  display:inline
+                  }")),
+            strong('Marker Name: ',style="display:inline;"), textOutput("marker_name_output"),
+            br(),
+            # div(style="display: inline", p(span(style="color:blue; font-weight:bold","Marker Name: "), textOutput('marker_name_output'))),
+            # textOutput('marker_name_output'),
+            # div(style="display:inline",paste0(strong('Marker Name: '), textOutput("marker_name_output"))),
+            br(),
+            selectInput('cell_pop_input', "Select Cell Population", choices = c(unique(
+                readr::read_csv(input$raw_upload$datapath)$pop
+            )))
         )
-        build_regression_report_gui(
-                                input$raw_upload$datapath, 
-                                input$cell_pop_input, 
-                                "CD20 X40", 
-                                "optimal=2mg/ml")
-        
     })
     
     create_regression_report_modified <- reactive({
@@ -789,7 +854,7 @@ server = function(input, output) {
             as.numeric(input$threshold),
             input$raw_upload$datapath,
             input$cell_pop_input, 
-            "CD20 X40", 
+            marker_name(), 
             "optimal=2mg/ml",
             paste("Notes:", input$notes))
         while (!is.null(dev.list()))  dev.off()
@@ -802,17 +867,6 @@ server = function(input, output) {
         },
         content = function(file){
             create_regression_report_modified()
-            # build_regression_report_gui_modified(
-            #     keep(),
-            #     poly_order(),
-            #     as.numeric(input$CI),
-            #     as.numeric(input$threshold),
-            #     input$raw_upload$datapath,
-            #     input$cell_pop_input, 
-            #     "CD20 X40", 
-            #     "optimal=2mg/ml",
-            #     paste("Notes:", input$notes))
-            # while (!is.null(dev.list()))  dev.off()
         }
     )
     

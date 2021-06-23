@@ -74,7 +74,6 @@ concentration_choiceValues <- function(choiceNames){
 ## Calculate the % of 4C Reference MFI data from the uploaded stats
 calculate_perct_4C_MFI <- function(df){
 
-    print(df)
     calc_vect <- c() # Initialize % of 4C MFI data
     for(i in unique(df$Concentration)){
         for(row in c(1:nrow(df[df$Concentration == i,]))){
@@ -130,10 +129,6 @@ create_modified_reference_MFI_table_wide <- function(df){
     return(df2)
 }
 create_reference_MFI_table_wide_color_excludes <- function(df, keep, exclude){
-    print('KEEP')
-    print(keep)
-    print('EXCLUDE')
-    print(exclude)
     
     df_selected <- select(df, c(Condition, Concentration, `% 4C Reference MFI`))
     
@@ -144,6 +139,7 @@ create_reference_MFI_table_wide_color_excludes <- function(df, keep, exclude){
     }
     return(df2)
 }
+## if 
 
 
 concentrations_to_keep <- function(reference_MFI_data_wide, columns_to_include){
@@ -182,7 +178,7 @@ concentrations_around_optimal <- function(optimal){
     h <- hash(key,value)
     optimal_key <- as.character(paste0(optimal, ' ng/test'))
     optimal_value <- as.numeric(values(h)[optimal_key])
-    # print(optimal_value)
+    
     if(optimal_value == max(value)){
         conc_around_optimal <- c(optimal_value-2, optimal_value-1, optimal_value)
     } else if(optimal_value == min(value)){
@@ -200,13 +196,9 @@ melt_reference_mfi_table <- function(df_full=template_data){
     # Melt Columns by Time
     dataMelt <- melt(df_full, "Time", variable='Concentrations')
     dataMelt <- cbind(dataMelt, 'Labels'=paste0(parse_number(as.character(dataMelt$Concentrations)), ' ng/test'))
-
-    # print('dataMelt: ')
-
     
     return(na.omit(dataMelt))
 }
-# dotPlotData <- melt_reference_mfi_table(fullDataTable(reference_MFI_data_wide))
 
 
 regressionDataTable <- function(df_full) {
@@ -219,14 +211,7 @@ regressionDataTable <- function(df_full) {
     # Threshold % of 4C MFI value to determine shelf-life
     threshold_y = 75
     
-    # df_csv <- reference_MFI_data_wide
-    # 
-    # df_full <- cbind(df_csv, "Average"=rowMeans(df_csv[2:ncol(df_csv)]))
-    
-    
     df_regression <- data.frame("Time"=df_full$Time,"Average"=df_full$value, na.omit = TRUE)
-    # print('df_regression: ')
-    # print(df_regression)
     return(df_regression)
     
     
@@ -284,17 +269,11 @@ polynomial_evaluation_of_linearity <- function(df_melt, order){
     c_pvalue <- p_values[3]
     d_pvalue <- p_values[4]
     
-    # print(paste('p-value of a: ', a_pvalue))
-    # print(paste('p-value of b: ', b_pvalue))
-    # print(paste('p-value of c: ', c_pvalue))
-    # print(paste('p-value of d: ', d_pvalue))
-    
     pvalue_df <- data.frame('a_pvalue'=a_pvalue,
                             'b_pvalue'=b_pvalue,
                             'c_pvalue'=c_pvalue,
                             'd_pvalue'=d_pvalue)
 
-    # print(pvalue_df)
     return(pvalue_df)
 }
 
@@ -360,11 +339,6 @@ solve_for_lower_shelf_life <- function(df_melt, order, CI, threshold_y){
     b <- as.numeric(format(round(summary_regression$coefficients[[2]],2))) # 1st order coeff
     c <- ifelse(order > 1, as.numeric(format(round(summary_regression$coefficients[[3]],2))), 0) # 2nd order coeff
     d <- ifelse(order > 2, as.numeric(format(round(summary_regression$coefficients[[4]],2))), 0) # 3rd order coeff
-    
-    # print(paste("a: ", a))
-    # print(paste("b: ", b))
-    # print(paste("c: ", c))
-    # print(paste("d: ", d))
 
     x_new <- seq(min(x), max(x), length.out = length(x))
     y_fit <- a + b*x_new + c*x_new^2 + d*x_new^3
@@ -389,11 +363,6 @@ solve_for_lower_shelf_life <- function(df_melt, order, CI, threshold_y){
     c_lower <- ifelse(order > 1, as.numeric(format(round(summary_regression_lower$coefficients[[3]],2))), 0) # 2nd order coeff
     d_lower <- ifelse(order > 2, as.numeric(format(round(summary_regression_lower$coefficients[[4]],2))), 0) # 3rd order coeff
     
-    # print(paste("a_lower: ", a_lower))
-    # print(paste("b_lower: ", b_lower))
-    # print(paste("c_lower: ", c_lower))
-    # print(paste("d_lower: ", d_lower))
-    
     f1_lower <- function(x) a_lower + b_lower*x + c_lower*x^2 + d_lower*x^3
     f2_lower <- function(x) threshold_y
     
@@ -403,7 +372,6 @@ solve_for_lower_shelf_life <- function(df_melt, order, CI, threshold_y){
         shelf_life_lower = NULL
         return(shelf_life_lower)
     })
-    # print(shelf_life_lower)
     return(shelf_life_lower)
 }
 
@@ -567,10 +535,7 @@ normal_probability_plot_w_tooltip <- function(p){
 
 read_marker_data <- function(wave_data, sheet="Sheet1"){
     wave_df <- readxl::read_xlsx(wave_data, sheet)
-    # print(wave_df)
     marker_info <- paste0(wave_df$`Target Species`,' ', wave_df$Specificity,' ', '(', wave_df$Clone, ')',' ', wave_df$Format)
-    # print(marker_info)
-    # print(wave_df$`Optimal (ng/test)`[wave_df$Specificity=='Integrin'])
     wave_df <- tibble(cbind(wave_df, 'Marker Description'=marker_info))
     return(wave_df)
 }
@@ -579,8 +544,6 @@ read_marker_data <- function(wave_data, sheet="Sheet1"){
 
 anderson_darling_normality_test <- function(residuals){
     ad <- ad.test(residuals$Residuals)
-    # print(ad)
-    # sqrt(ad$statistic^2)
     p_value <- ad$p.value
     
     # null hypothesis is that data DOES follow normal distribution
@@ -599,7 +562,6 @@ results_summary <- function(data, order, CI){
              'Adj. R-squared' = adj_R_sq(data, order),
              'Model p-value' = round(ifelse(order == 2, as.numeric(polynomial_evaluation_of_linearity(data, order)$c_pvalue), as.numeric(polynomial_evaluation_of_linearity(data, order)$b_pvalue)),3)
          )
-     # print(df)
      return(df)
 }
 
@@ -786,9 +748,7 @@ loop_through_for_summary <- function(data_directory, wave_summary_file, sheet, w
                   # "Adj. R-squared Pass/Fail"=NA,
                   # "Model p-value Pass/Fail"=NA
                   )
-    # print(tib)
     wave_summary <- readxl::read_xlsx(wave_summary_file, sheet=sheet)
-    # print(wave_summary)
     files_to_analyze <- wave_summary$Filename
     # for(file in unique(files_to_analyze)){
     #     print(file)
