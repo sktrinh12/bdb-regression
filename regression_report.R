@@ -208,7 +208,7 @@ anderson_darling_p_value_png <- function(p_value){
     print(ad_p_value_df)
 }
 
-regression_pdf <- function(regress_plot, reference_mfi_table, shelf_life_summary_table, cell_pop, marker_name, optimal){
+regression_pdf <- function(regress_plot, reference_mfi_table, shelf_life_summary_table, cell_pop, marker_name, optimal, notes){
     
     # Create regression plot png
     png("regression_plot.png", width = 1200, height = 800, units = "px")
@@ -233,14 +233,11 @@ regression_pdf <- function(regress_plot, reference_mfi_table, shelf_life_summary
     figure <- ggarrange(
         png_plots[[1]], ggarrange(png_plots[[2]], png_plots[[3]], ncol = 2),
         labels = c(paste0(cell_pop,"\n",marker_name, "\n", optimal)),
-        
         nrow = 2
     )
-    figure <- ggpubr::annotate_figure(figure,
-                    top = textbox_grob("Data source: \n ToothGrowth data set what if I start writing a ton of crap on here will it word wrap?", 
-                                       x = unit(0.5, "npc"), y = unit(0.7, "npc"),
-                                       hjust = 1))
     
+    figure <- ggpubr::annotate_figure(figure,
+                                      bottom = text_grob(notes, hjust = 1))
     return(figure)
 }
 quality_checks_pdf <- function(resid_plot, resid_histogram, normal_prob_plot, normality_table){
@@ -279,7 +276,7 @@ quality_checks_pdf <- function(resid_plot, resid_histogram, normal_prob_plot, no
 }
 
 
-build_regression_report <- function(data_path, stats_file, cell_pop, marker_name, optimal){
+build_regression_report <- function(data_path, stats_file, cell_pop, marker_name, optimal, notes){
     
     
     ## Step 1: Upload raw stats ##
@@ -346,7 +343,7 @@ build_regression_report <- function(data_path, stats_file, cell_pop, marker_name
     normality_pvalue_png <- anderson_darling_p_value_png(normality_p_value)
     
     pdf(file.path(data_path, paste0("regression_report_",cell_pop, ".pdf")), title="Regression for Stability", width = 16, height = 10, onefile = TRUE)
-    print(regression_pdf(regress_plot, reference_mfi_table_png, shelf_life_summary_png, cell_pop, marker_name, optimal))
+    print(regression_pdf(regress_plot, reference_mfi_table_png, shelf_life_summary_png, cell_pop, marker_name, optimal, notes))
     print(quality_checks_pdf(resid_plot, resid_histogram, normal_prob_plot, normality_pvalue_png))
     
     dev.off()
@@ -405,7 +402,7 @@ build_regression_report_per_cell_pop <- function(data_path, stats_file){
     merge_full_stability_report(data_path, regression_report_filename_list, all_regression_reports)
 }
 
-build_regression_report_gui <- function(stats_file, cell_pop, marker_name, optimal){
+build_regression_report_gui <- function(stats_file, cell_pop, marker_name, optimal, notes){
     
     print(keep)
     ## Step 1: Upload raw stats ##
@@ -476,14 +473,14 @@ build_regression_report_gui <- function(stats_file, cell_pop, marker_name, optim
     print("step 18")
     pdf(paste0("regression_report_",cell_pop, ".pdf"), title="Regression for Stability", width = 16, height = 10, onefile = TRUE)
     
-    print(regression_pdf(regress_plot, reference_mfi_table_png, shelf_life_summary_png, cell_pop, marker_name, optimal))
+    print(regression_pdf(regress_plot, reference_mfi_table_png, shelf_life_summary_png, cell_pop, marker_name, optimal, notes))
     print(quality_checks_pdf(resid_plot, resid_histogram, normal_prob_plot, normality_pvalue_png))
     print("Building regression report for Lymphs...")
     dev.off()
     print("Report complete.")
 }
 
-build_regression_report_gui_modified <- function(df_melt, order, ci, threshold_mfi, stats_file, cell_pop, marker_name, optimal){
+build_regression_report_gui_modified <- function(df_melt, order, ci, threshold_mfi, stats_file, cell_pop, marker_name, optimal, notes){
 
     df <- get_stats_table_for_mfi_table(stats_file, cell_pop)
     
@@ -552,12 +549,81 @@ build_regression_report_gui_modified <- function(df_melt, order, ci, threshold_m
     print("step 18")
     pdf(paste0("regression_report_",cell_pop, ".pdf"), title="Regression for Stability", width = 16, height = 10, onefile = TRUE)
     print("step 19")
-    print(regression_pdf(regress_plot, reference_mfi_table_png, shelf_life_summary_png, cell_pop, marker_name, optimal))
+    title_page = regression_gui_title_page(cell_pop, marker_name, order, ci, threshold_mfi, notes)
+    print(title_page)
+    print(regression_pdf(regress_plot, reference_mfi_table_png, shelf_life_summary_png, cell_pop, marker_name, optimal, notes))
     print("step 20")
     print(quality_checks_pdf(resid_plot, resid_histogram, normal_prob_plot, normality_pvalue_png))
     cat(paste("Making regression report for", cell_pop, "\n"))
     dev.off()
-    cat("Report complete.")
+    cat("Report complete.\n")
     
     
+}
+
+
+regression_gui_title_page = function(cell_pop, marker_name, order, ci, mfi_threshold, notes) {
+    
+    # get all required details
+    cell_pop = cell_pop
+    marker = marker_name
+    # clone = as.character(unique(settings$Clone)[1])
+    # fluor = unique(settings$Fluorochrome)[1]
+    # batch = unique(settings$Batch.Number)[1]
+    if(order == 1){
+        polynomial_order <- "Linear"
+    }
+    else if(order == 2){
+        polynomial_order <- "2nd Order"
+    }
+    else if(order == 3){
+        polynomial_order <- "3rd Order"
+    }
+    polynomial_order = polynomial_order
+    confidence_interval = ci
+    mfi_threshold = mfi_threshold
+    notes = notes
+    # pop_specs_all = list()
+    # if (rd$spec[[markerXrow]][["disabled"]] == FALSE){
+    #     for (i in 1:length(POP_NAMES)){
+    #         spec_min = rd$spec[[markerXrow]][[POP_NAMES[i]]]$min
+    #         spec_max = rd$spec[[markerXrow]][[POP_NAMES[i]]]$max
+    #         pop_specs_all[i] = paste0(POP_NAMES[i], " range = ", spec_min, "-", spec_max,"%")
+    #     }
+    #     pop_specs = paste(unlist(pop_specs_all), collapse = " ")
+    # } else {
+    #     pop_specs = "No spec given"
+    # }
+    # get plot lists
+    plot_0 = list(ggpubr::text_grob("Post-Review Regression Analysis", color = "deepskyblue3", face = "bold", size = 25))
+    plot_1 = list(ggpubr::text_grob(paste("Cell Population:", cell_pop, "\n",
+                                          "Marker Name:", marker_name, "\n"
+                                          # "Clone:", clone, "\n",
+                                          # "Fluorochrome:", fluor, "\n",
+                                          # "Batch #:", batch
+                                          ), color = "deepskyblue3", face = "bold"))
+    # plot_2 = list(ggpubr::text_grob(paste0("Parameters Selected from App", "\n"), color = "deepskyblue3", face = "italic", size = 18),
+    plot_2 = list(ggpubr::text_grob(paste0("Parameters Selected from App:", "\n",
+                                           "Polynomial Order: ", polynomial_order, "\n",
+                                           "Confidence Interval: ", as.numeric(ci)*100, "%", "\n",
+                                           "MFI Threshold: ", mfi_threshold, "%", "\n",
+                                           notes), color = "grey25", face = "plain")
+                  )
+    # plot_2 = list(ggpubr::text_grob(paste0("Parameters Selected from App", "\n",
+    #                                        "Polynomial Order: ", polynomial_order, "\n",
+    #                                        "Confidence Interval: ", as.numeric(ci)*100, "%", "\n",
+    #                                        "MFI Threshold: ", mfi_threshold, "%", "\n",
+    #                                        notes), color = "grey25", face = "plain"))
+    # plot_3 = list(ggpubr::text_grob(pop_specs, color = "grey25", face = "plain"))
+    
+    # assemble plot
+    plots = c(plot_0, plot_1, plot_2)
+    figure = ggpubr::ggarrange(plotlist=plots, nrow = 3)
+    
+    figure
+}
+
+merged_pdfs_for_gui <- function(regr_report, uploaded_report){
+    
+    pdf_combine(c(regr_report, uploaded_report), output = "final_regression_report_post_review.pdf")
 }

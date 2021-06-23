@@ -782,7 +782,7 @@ server = function(input, output) {
         validate(
             need(input$cell_pop_input != "", "Wait for cell population list to load") # display custom message in need
         )
-        build_regression_report_gui_modified(
+        report <- build_regression_report_gui_modified(
             keep(),
             poly_order(),
             as.numeric(input$CI),
@@ -790,7 +790,10 @@ server = function(input, output) {
             input$raw_upload$datapath,
             input$cell_pop_input, 
             "CD20 X40", 
-            "optimal=2mg/ml")
+            "optimal=2mg/ml",
+            paste("Notes:", input$notes))
+        while (!is.null(dev.list()))  dev.off()
+        return(report)
     })
     
     output$regression_report <- downloadHandler(
@@ -798,18 +801,30 @@ server = function(input, output) {
             "regression_report_output.pdf"
         },
         content = function(file){
-            build_regression_report_gui_modified(
-                keep(),
-                poly_order(),
-                as.numeric(input$CI),
-                as.numeric(input$threshold),
-                input$raw_upload$datapath,
-                input$cell_pop_input, 
-                "CD20 X40", 
-                "optimal=2mg/ml")
-            while (!is.null(dev.list()))  dev.off()
+            create_regression_report_modified()
+            # build_regression_report_gui_modified(
+            #     keep(),
+            #     poly_order(),
+            #     as.numeric(input$CI),
+            #     as.numeric(input$threshold),
+            #     input$raw_upload$datapath,
+            #     input$cell_pop_input, 
+            #     "CD20 X40", 
+            #     "optimal=2mg/ml",
+            #     paste("Notes:", input$notes))
+            # while (!is.null(dev.list()))  dev.off()
         }
     )
+    
+    output$regression_report_bundled <- downloadHandler(
+        filename = function(){
+            "regression_report_output_bundled.pdf"
+        },
+        content = function(file){
+            merged_pdfs_for_gui(input$omiq_report_upload$datapath, input$regression_reports_indiv$datapath)
+        }
+    )
+    
     
     kept_excluded <- reactive({
         print(create_reference_MFI_table_wide_color_excludes(raw_upload_data_with_perct_MFI(), keep(), exclude()))

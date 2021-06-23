@@ -52,7 +52,12 @@ ui = tagList(
                          div(style = "display: flex; align-items: center; justify-content: center; padding-top: 10px", 
                             downloadButton("pptx_id", "Download PPT", class = "btn-primary"))),
                      br(),
-                     downloadButton("regression_report", "Download OMIQ Regression Report", class = "btn-primary")
+                     downloadButton("regression_report", "Download Indiv. Regression Report", class = "btn-primary"),
+                     br(),
+                     br(),
+                     fileInput('regression_reports_indiv', "Upload generated regression report", multiple = TRUE, accept = c('.pdf')),
+                     br(),
+                     downloadButton("regression_report_bundled", "Download Bundled Regression Report", class = "btn-secondary")
                      )
                  ),
                  mainPanel(
