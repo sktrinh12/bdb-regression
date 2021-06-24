@@ -49,6 +49,8 @@ ui = tagList(
                  mainPanel(
                      tabsetPanel(
                          tabPanel("Stats Table",
+                                  
+                                  uiOutput('table_title'),
                                   br(),
                                   DT::dataTableOutput("reference_mfi_data_table"),
                                   br()

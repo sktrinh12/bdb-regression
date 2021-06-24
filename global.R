@@ -56,7 +56,7 @@ regression_plot_global <- function(text_size, data_point_size, eqn_size, df, con
 
 ## Create concentration choice names for UI selection (based on file input)
 concentration_choiceNames <- function(df){
-    list_of_concentrations <- unique(df$Concentration)
+    list_of_concentrations <- unique(sort(df$Concentration))
     choiceNames <- c()
     for(i in list_of_concentrations){
         name <- paste(i, "ng/test")
@@ -71,18 +71,36 @@ concentration_choiceValues <- function(choiceNames){
     return(choiceValues)
 }
 
+# df$`%+` <- ifelse(sapply(as_tibble(rep(NA, length(df$`%+`))), function(i) { df$`%+` == "n/a" | df$`%+` == "#N/A" }), NA, df$`%+`)
+# df$`MFI+` <- ifelse(sapply(as_tibble(rep(NA, length(df$`MFI+`))), function(i) { df$`MFI+` == "n/a" | df$`MFI+` == "#N/A" }), NA, df$`MFI+`)
+# df$`MFI-` <- ifelse(sapply(as_tibble(rep(NA, length(df$`MFI-`))), function(i) { df$`MFI-` == "n/a" | df$`MFI-` == "#N/A" }), NA, df$`MFI-`)
+# df$`rSD-` <- ifelse(sapply(as_tibble(rep(NA, length(df$`rSD-`))), function(i) { df$`rSD-` == "n/a" | df$`rSD-` == "#N/A" }), NA, df$`rSD-`)
+
+
 ## Calculate the % of 4C Reference MFI data from the uploaded stats
 calculate_perct_4C_MFI <- function(df){
 
+    df$`%+` <- as.numeric(ifelse(sapply(as_tibble(rep(NA, length(df$`%+`))), function(i) { df$`%+` == "n/a" | df$`%+` == "#N/A" }), NA, df$`%+`))
+    df$`MFI+` <- as.numeric(ifelse(sapply(as_tibble(rep(NA, length(df$`MFI+`))), function(i) { df$`MFI+` == "n/a" | df$`MFI+` == "#N/A" }), NA, df$`MFI+`))
+    df$`MFI-` <- as.numeric(ifelse(sapply(as_tibble(rep(NA, length(df$`MFI-`))), function(i) { df$`MFI-` == "n/a" | df$`MFI-` == "#N/A" }), NA, df$`MFI-`))
+    df$`rSD-` <- as.numeric(ifelse(sapply(as_tibble(rep(NA, length(df$`rSD-`))), function(i) { df$`rSD-` == "n/a" | df$`rSD-` == "#N/A" }), NA, df$`rSD-`))
+    
+    # df$`MFI+` <- ifelse(sapply(as_tibble(rep(NA, length(df$`MFI+`))), function(i)
+    #     { df$`MFI+` == "n/a" | df$`MFI+` == "#N/A" | df$`MFI+` == "NA" }
+    #     ), NA, df$`MFI+`)
+    
+    df <- df %>% arrange(Concentration, Condition)
+    print(df)
     calc_vect <- c() # Initialize % of 4C MFI data
     for(i in unique(df$Concentration)){
         for(row in c(1:nrow(df[df$Concentration == i,]))){
+
             ref_for_each_conc <- df$`MFI+`[df$Concentration == i & df$Condition == 0]
             MFI <- df$`MFI+`[df$Concentration == i][[row]]
             calc <- round((as.numeric(MFI)/as.numeric(ref_for_each_conc))*100,0)
             calc_vect <- append(calc_vect, calc)
+            
         }
-        
     }
     df <- bind_cols(df, "% 4C Reference MFI"=calc_vect)
     return(df)
@@ -90,20 +108,6 @@ calculate_perct_4C_MFI <- function(df){
 
 ## FOR UI USE ONLY
 ## Convert the reference MFI table to a wide table, each column designated to each concentration
-create_reference_MFI_table_wide_UI_only <- function(df){
-    
-    # Take only subset of raw stats table
-    df_selected <- select(df, c(Condition, Concentration, `% 4C Reference MFI`))
-
-    df_wide <- df_selected %>% pivot_wider(names_from = Concentration, values_from = `% 4C Reference MFI`)
-    colnames(df_wide)[1] <- "Time"
-    for(i in c(2:length(colnames(df_wide)))){
-        colnames(df_wide)[i] <- paste0(colnames(df_wide)[i], " ng/test")
-    }
-
-    return(df_wide)
-}
-
 create_raw_reference_MFI_table_wide <- function(df){
     
     # Take only subset of raw stats table
@@ -114,30 +118,21 @@ create_raw_reference_MFI_table_wide <- function(df){
     for(i in c(2:length(colnames(df_wide)))){
         colnames(df_wide)[i] <- paste0(colnames(df_wide)[i], " ng/test")
     }
-
+    df_wide <- df_wide %>% arrange(Time)
     return(df_wide)
 }
 
-create_modified_reference_MFI_table_wide <- function(df){
-    df_selected <- select(df, c(Condition, Concentration, `% 4C Reference MFI`))
-
-    df2 <- df_selected %>% pivot_wider(names_from = Concentration, values_from = `% 4C Reference MFI`)
-    colnames(df2)[1] <- "Time"
-    for(i in c(2:length(colnames(df2)))){
-        colnames(df2)[i] <- paste0(colnames(df2)[i], " ng/test")
-    }
-    return(df2)
-}
 create_reference_MFI_table_wide_color_excludes <- function(df, keep, exclude){
     
     df_selected <- select(df, c(Condition, Concentration, `% 4C Reference MFI`))
     
-    df2 <- df_selected %>% pivot_wider(names_from = Concentration, values_from = `% 4C Reference MFI`)
-    colnames(df2)[1] <- "Time"
-    for(i in c(2:length(colnames(df2)))){
-        colnames(df2)[i] <- paste0(colnames(df2)[i], " ng/test")
+    df_wide <- df_selected %>% pivot_wider(names_from = Concentration, values_from = `% 4C Reference MFI`)
+    colnames(df_wide)[1] <- "Time"
+    for(i in c(2:length(colnames(df_wide)))){
+        colnames(df_wide)[i] <- paste0(colnames(df_wide)[i], " ng/test")
     }
-    return(df2)
+    df_wide <- df_wide %>% arrange(Time)
+    return(df_wide)
 }
 ## if 
 
@@ -366,7 +361,7 @@ solve_for_lower_shelf_life <- function(df_melt, order, CI, threshold_y){
     f1_lower <- function(x) a_lower + b_lower*x + c_lower*x^2 + d_lower*x^3
     f2_lower <- function(x) threshold_y
     
-    # UPDATE: ADDING TRYCATCH STATEMENT TO CATCH getChannel() ERROR
+    # UPDATE: ADDING TRYCATCH STATEMENT IF DOESNT CROSS MFI THRESHOLD
     shelf_life_lower <- tryCatch(uniroot(function(x) f1_lower(x)-f2_lower(x),c(0,5), extendInt="yes")$root, error = function(c){
         cat("Never crosses MFI Threshold - no shelf-life can be found \n")
         shelf_life_lower = NULL
@@ -376,13 +371,20 @@ solve_for_lower_shelf_life <- function(df_melt, order, CI, threshold_y){
 }
 
 rounded_shelf_life <- function(shelf_life){
+    
+    ## If cannot find shelf-life, output message to UI
+    if(is.null(shelf_life)){
+        cat("Never crosses MFI Threshold - no shelf-life can be found \n")
+        return(shelf_life)
+        
+    }
     ## Rounding rules:
     ## 1. Round down to nearest half integer
     ## 2. If a half or whole integer, still round down to next half integer
     ## 3. If 1.5yrs, don't round down
     
     # If shelf-life is greater than 5 years, round down to 5 years to avoid extrapolation
-    if(shelf_life > 5){
+    else if(shelf_life > 5){
         shelf_life <- 5 # max timepoint tested
     }
     # If shelf-life is equal to or below 1.5y, don't round down
@@ -618,7 +620,7 @@ summarize_means <- function(df){
 
 mfi_vs_concentration_plot <- function(df){
     
-    p <- ggplot(df, aes(x=as.factor(Concentration), y=`MFI+`, group=Condition, color=as.factor(Condition))) + 
+    p <- ggplot(df, aes(x=as.factor(Concentration), y=as.numeric(`MFI+`), group=Condition, color=as.factor(Condition))) + 
         geom_point(size=4) + 
         geom_line(size=1) + 
         scale_colour_brewer(palette="Dark2", labels=unique(paste0(df$Condition, " years"))) +
@@ -634,7 +636,7 @@ mfi_vs_concentration_plot <- function(df){
 
 mfi_vs_time_plot <- function(df){
 
-    p <- ggplot(df, aes(x=as.factor(Condition), y=`MFI+`, group=Concentration, color=as.factor(Concentration))) + 
+    p <- ggplot(df, aes(x=as.factor(Condition), y=as.numeric(`MFI+`), group=Concentration, color=as.factor(Concentration))) + 
         geom_point(size=4) + 
         geom_line(size=1) + 
         scale_colour_brewer(palette="Dark2", labels=unique(paste0(df$Concentration, " ng/test"))) +
@@ -649,7 +651,21 @@ mfi_vs_time_plot <- function(df){
 }
 
 stain_index <- function(df){
-    si = (df$`MFI+` - df$`MFI-`)/(2*df$`rSD-`)
+    # if(is.numeric(df$`MFI+`)){
+    #     si = (df$`MFI+` - df$`MFI-`)/(2*df$`rSD-`)
+    # }
+    # else{
+    #     print(df$`MFI+`)
+    # }
+    
+    # print(df$`MFI+`)
+    # df$`%+` <- ifelse(sapply(as_tibble(rep(NA, length(df$`%+`))), function(i) { df$`%+` == "n/a" | df$`%+` == "#N/A" }), NA, df$`%+`)
+    # df$`MFI+` <- ifelse(sapply(as_tibble(rep(NA, length(df$`MFI+`))), function(i) { df$`MFI+` == "n/a" | df$`MFI+` == "#N/A" }), NA, df$`MFI+`)
+    # df$`MFI-` <- ifelse(sapply(as_tibble(rep(NA, length(df$`MFI-`))), function(i) { df$`MFI-` == "n/a" | df$`MFI-` == "#N/A" }), NA, df$`MFI-`)
+    # df$`rSD-` <- ifelse(sapply(as_tibble(rep(NA, length(df$`rSD-`))), function(i) { df$`rSD-` == "n/a" | df$`rSD-` == "#N/A" }), NA, df$`rSD-`)
+    # print(df$`MFI+`)
+    si = (as.numeric(df$`MFI+`) - as.numeric(df$`MFI-`))/(2*as.numeric(df$`rSD-`))
+    # print(si)
     df <- cbind(df, "Stain Index"=si)
     
     p <- ggplot(df, aes(x=as.factor(Condition), y=`Stain Index`, group=Concentration, color=as.factor(Concentration))) + 
@@ -668,7 +684,7 @@ stain_index <- function(df){
 }
 
 signal_to_noise <- function(df){
-    sn = df$`MFI+`/df$`MFI-`
+    sn = as.numeric(df$`MFI+`)/as.numeric(df$`MFI-`)
     df <- cbind(df, "Signal-to-Noise"=sn)
     
     p <- ggplot(df, aes(x=as.factor(Condition), y=`Signal-to-Noise`, group=Concentration, color=as.factor(Concentration))) + 
@@ -688,7 +704,7 @@ signal_to_noise <- function(df){
 
 percent_positive <- function(df){
     
-    p <- ggplot(df, aes(x=as.factor(Condition), y=`%+`, group=Concentration, color=as.factor(Concentration))) + 
+    p <- ggplot(df, aes(x=as.factor(Condition), y=as.numeric(`%+`), group=Concentration, color=as.factor(Concentration))) + 
         geom_point(size=4) + 
         geom_line(size=1) + 
         scale_colour_brewer(palette="Dark2", labels=unique(paste0(df$Concentration, " ng/test"))) +
@@ -706,7 +722,7 @@ percent_positive <- function(df){
  
 percent_of_4C_MFI <- function(df){
     
-    p <- ggplot(df, aes(x=as.factor(Condition), y=`%+`, group=Concentration, color=as.factor(Concentration))) + 
+    p <- ggplot(df, aes(x=as.factor(Condition), y=as.numeric(`%+`), group=Concentration, color=as.factor(Concentration))) + 
         geom_point(size=4) + 
         geom_line(size=1) + 
         scale_colour_brewer(palette="Dark2", labels=unique(paste0(df$Concentration, " ng/test"))) +

@@ -227,7 +227,7 @@ server = function(input, output) {
     ## Step 2: Calculate % of 4C Reference MFI Data
     raw_upload_data_with_perct_MFI <- reactive({
         req(input$raw_upload)
-        calculate_perct_4C_MFI(raw_upload_data())
+        suppressWarnings(calculate_perct_4C_MFI(raw_upload_data()))
     })
     
     
@@ -259,7 +259,7 @@ server = function(input, output) {
     ## Step 4a: Create wide table of % 4C Reference MFI Data for UI ONLY
     raw_reference_MFI_data_wide_UI_only <- reactive({
         req(input$raw_upload)
-        create_reference_MFI_table_wide_UI_only(raw_upload_data_with_perct_MFI())
+        create_raw_reference_MFI_table_wide(raw_upload_data_with_perct_MFI())
     })
     
     ## Step 4b: Create wide table of % 4C Reference MFI Data for analysis use
@@ -379,13 +379,16 @@ server = function(input, output) {
         return(concentrations_to_keep(raw_reference_MFI_data_wide_UI_only(), concentrations_to_include_list()))
     })
     
+    output$table_title <- renderUI({ 
+        req(input$raw_upload)
+        h3("% of 4C Reference MFI") 
+    })
     ## Step 3c: Output % of 4C Reference MFI Data Table to UI
     output$reference_mfi_data_table <- DT::renderDataTable({
         if (is.null(input$raw_upload)) {
             return (NULL)
         }
         df <- reference_MFI_data_to_include()
-        
         DT::datatable(df) %>%
             formatRound(columns=c(1), 1) %>%
             formatRound(columns=c(2:ncol(df)), 0)
