@@ -30,7 +30,7 @@ ui = tagList(
                      div(style = " overflow-x: scroll;",
                          radioButtons("analysis_type","Select Manual or OMIQ Analysis", choices = c("Manual", "OMIQ"), inline=TRUE),
                          uiOutput('manual_or_omiq'),
-                         
+                         uiOutput('manual_or_omiq_cell_pop'),
                      
                          fluidRow(column(12,
                                          radioButtons('polynomial_order','Order of Polynomial', 

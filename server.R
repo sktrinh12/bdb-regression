@@ -55,13 +55,46 @@ server = function(input, output) {
                     "raw_upload",
                     "Choose stats file to upload",
                     accept = c('text/csv',
-                               '.csv')),
-                    br(),
-                    uiOutput('cell_pop_ui')
+                               '.csv'))
+                    # br(),
+                    # uiOutput('cell_pop_ui')
                 )
             
         }
         
+    })
+    output$manual_or_omiq_cell_pop <- renderUI({
+        req(input$raw_upload)
+        if(input$analysis_type == "OMIQ"){
+            tagList(
+                br(),
+                uiOutput('cell_pop_ui')
+            )
+        }
+        else{
+            tagList()
+        }
+    })
+    output$cell_pop_ui <- renderUI({
+        # req(input$raw_upload)
+        # validate(
+        #     need(input$cell_pop_input != "", "Wait for cell population list to load") # display custom message in need
+        # )
+        tagList(
+            tags$head(tags$style("
+                  #marker_name_output{
+                  display:inline
+                  }")),
+            strong('Marker Name: ',style="display:inline;"), textOutput("marker_name_output"),
+            br(),
+            # div(style="display: inline", p(span(style="color:blue; font-weight:bold","Marker Name: "), textOutput('marker_name_output'))),
+            # textOutput('marker_name_output'),
+            # div(style="display:inline",paste0(strong('Marker Name: '), textOutput("marker_name_output"))),
+            br(),
+            selectInput('cell_pop_input', "Select Cell Population", choices = c(unique(
+                readr::read_csv(input$raw_upload$datapath)$pop
+            )))
+        )
     })
     
     output$omiq_report_bundle_ui <- renderUI({
@@ -161,7 +194,7 @@ server = function(input, output) {
 
     ############################### RAW DATA ONLY ###################################
     ## STEP 1: Upload Raw Stats (without % 4C Reference MFI Data)
-    raw_upload_data <- reactive({
+    raw_upload_data_prelim <- reactive({
         inFile <- input$raw_upload
         if(is.null(inFile))
             return(NULL)
@@ -170,12 +203,26 @@ server = function(input, output) {
         }
         else if(input$analysis_type == "OMIQ"){
             df <- readr::read_csv(inFile$datapath)
-            df <- configure_stats(df, "Lymph")
         }
         
         return(df)
     })
-    
+    raw_upload_data <- reactive({
+        req(raw_upload_data_prelim())
+        
+        
+        if(input$analysis_type == "Manual"){
+            df <- raw_upload_data_prelim()
+        }
+        else if(input$analysis_type == "OMIQ"){
+            req(input$cell_pop_input)
+            df <- configure_stats(raw_upload_data_prelim(), 
+                                  as.character(input$cell_pop_input)
+                                  )
+        }
+        
+        return(df)
+    })
     
     ## Step 2: Calculate % of 4C Reference MFI Data
     raw_upload_data_with_perct_MFI <- reactive({
@@ -822,24 +869,7 @@ server = function(input, output) {
         # div(style="display: inline", p(span(style="color:blue; font-weight:bold","Marker Name: "), marker_name()))
     })
     
-    output$cell_pop_ui <- renderUI({
-        req(input$raw_upload)
-        tagList(
-            tags$head(tags$style("
-                  #marker_name_output{
-                  display:inline
-                  }")),
-            strong('Marker Name: ',style="display:inline;"), textOutput("marker_name_output"),
-            br(),
-            # div(style="display: inline", p(span(style="color:blue; font-weight:bold","Marker Name: "), textOutput('marker_name_output'))),
-            # textOutput('marker_name_output'),
-            # div(style="display:inline",paste0(strong('Marker Name: '), textOutput("marker_name_output"))),
-            br(),
-            selectInput('cell_pop_input', "Select Cell Population", choices = c(unique(
-                readr::read_csv(input$raw_upload$datapath)$pop
-            )))
-        )
-    })
+    
     
     create_regression_report_modified <- reactive({
         req(input$raw_upload)
@@ -881,7 +911,7 @@ server = function(input, output) {
     
     
     kept_excluded <- reactive({
-        print(create_reference_MFI_table_wide_color_excludes(raw_upload_data_with_perct_MFI(), keep(), exclude()))
+        create_reference_MFI_table_wide_color_excludes(raw_upload_data_with_perct_MFI(), keep(), exclude())
     })
     output$kept_excluded_table <- renderDataTable({ 
         req(input$raw_upload)
