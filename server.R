@@ -38,16 +38,8 @@ server = function(input, output) {
                     div(style = "display: grid; grid-template-columns: auto;",
                         fileInput("raw_upload","Choose stats file to upload",
                                   accept = c('text/xlsx',
-                                             '.xlsx'))),
-                    fluidRow(
-                        column(8,textAreaInput("model_system_data","QC Model System Data",
-                                               placeholder = "This will be copied to the top right corner of every PPT slide.",
-                                               height = "100px")
-                        ),
-                        column(4,radioButtons('pop_number','Cell Pop #',
-                                              choices = c("P1", "P2", "P3"),
-                                              inline = TRUE)
-                        ))
+                                             '.xlsx')))
+                    
                     )
         } else{
             tagList(
@@ -56,13 +48,28 @@ server = function(input, output) {
                     "Choose stats file to upload",
                     accept = c('text/csv',
                                '.csv'))
-                    # br(),
-                    # uiOutput('cell_pop_ui')
                 )
             
         }
         
     })
+    
+    output$PPT_cell_pops <- renderUI({
+        if(input$analysis_type == "Manual"){
+            tagList(
+                fluidRow(
+                    column(8,textAreaInput("model_system_data","QC Model System Data",
+                                           placeholder = "This will be copied to the top right corner of every PPT slide.",
+                                           height = "100px")
+                    ),
+                    column(4,radioButtons('pop_number','Cell Pop #',
+                                          choices = c("P1", "P2", "P3"),
+                                          inline = TRUE)
+                    ))
+            )
+        }
+    })
+    
     output$manual_or_omiq_cell_pop <- renderUI({
         req(input$raw_upload)
         if(input$analysis_type == "OMIQ"){
@@ -242,11 +249,11 @@ server = function(input, output) {
     })
     output$stain_index <- renderPlot({
         req(input$raw_upload)
-        stain_index(raw_upload_data())
+        suppressWarnings(stain_index(raw_upload_data()))
     })
     output$signal_to_noise <- renderPlot({
         req(input$raw_upload)
-        signal_to_noise(raw_upload_data())
+        suppressWarnings(signal_to_noise(raw_upload_data()))
     })
     output$percent_positive <- renderPlot({
         req(input$raw_upload)
@@ -466,7 +473,7 @@ server = function(input, output) {
        
     })
     
-    output$regression_plot_output <- renderPlot({ regr_plot() })
+    output$regression_plot_output <- renderPlot({ suppressWarnings(regr_plot()) })
     
     # Toggle points that are clicked
     observeEvent(input$regression_plot_output_click, {
@@ -890,6 +897,7 @@ server = function(input, output) {
             marker_name(), 
             "optimal=2mg/ml",
             paste("Notes:", input$notes))
+        # dev.off()
         while (!is.null(dev.list()))  dev.off()
         return(report)
     })

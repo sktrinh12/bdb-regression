@@ -85,12 +85,10 @@ calculate_perct_4C_MFI <- function(df){
     df$`MFI-` <- as.numeric(ifelse(sapply(as_tibble(rep(NA, length(df$`MFI-`))), function(i) { df$`MFI-` == "n/a" | df$`MFI-` == "#N/A" }), NA, df$`MFI-`))
     df$`rSD-` <- as.numeric(ifelse(sapply(as_tibble(rep(NA, length(df$`rSD-`))), function(i) { df$`rSD-` == "n/a" | df$`rSD-` == "#N/A" }), NA, df$`rSD-`))
     
-    # df$`MFI+` <- ifelse(sapply(as_tibble(rep(NA, length(df$`MFI+`))), function(i)
-    #     { df$`MFI+` == "n/a" | df$`MFI+` == "#N/A" | df$`MFI+` == "NA" }
-    #     ), NA, df$`MFI+`)
+    
     
     df <- df %>% arrange(Concentration, Condition)
-    print(df)
+    
     calc_vect <- c() # Initialize % of 4C MFI data
     for(i in unique(df$Concentration)){
         for(row in c(1:nrow(df[df$Concentration == i,]))){
@@ -509,12 +507,10 @@ find_residuals <- function(df_melt, order){
     fit <- lm(y ~ poly(x,order, raw=TRUE), data=df_melt)
     fit_residuals <- resid(fit)
     df <- df_melt %>% add_column("Residuals"=fit_residuals)
-    
     return(df)
 }
 
 normal_probability_plot <- function(df_melt, order, residuals, font_size, data_point_size){
-
     # And adding line with proper properties
     p <-
         ggplot(residuals, mapping = aes(sample = Residuals)) +
@@ -531,7 +527,7 @@ normal_probability_plot <- function(df_melt, order, residuals, font_size, data_p
 }
 
 normal_probability_plot_w_tooltip <- function(p){
-    p <- ggplotly(p, tooltip=c("text"))
+    p <- ggplotly(p)
     return(p)
 }
 
@@ -651,21 +647,12 @@ mfi_vs_time_plot <- function(df){
 }
 
 stain_index <- function(df){
-    # if(is.numeric(df$`MFI+`)){
-    #     si = (df$`MFI+` - df$`MFI-`)/(2*df$`rSD-`)
-    # }
-    # else{
-    #     print(df$`MFI+`)
-    # }
     
-    # print(df$`MFI+`)
-    # df$`%+` <- ifelse(sapply(as_tibble(rep(NA, length(df$`%+`))), function(i) { df$`%+` == "n/a" | df$`%+` == "#N/A" }), NA, df$`%+`)
-    # df$`MFI+` <- ifelse(sapply(as_tibble(rep(NA, length(df$`MFI+`))), function(i) { df$`MFI+` == "n/a" | df$`MFI+` == "#N/A" }), NA, df$`MFI+`)
-    # df$`MFI-` <- ifelse(sapply(as_tibble(rep(NA, length(df$`MFI-`))), function(i) { df$`MFI-` == "n/a" | df$`MFI-` == "#N/A" }), NA, df$`MFI-`)
-    # df$`rSD-` <- ifelse(sapply(as_tibble(rep(NA, length(df$`rSD-`))), function(i) { df$`rSD-` == "n/a" | df$`rSD-` == "#N/A" }), NA, df$`rSD-`)
-    # print(df$`MFI+`)
     si = (as.numeric(df$`MFI+`) - as.numeric(df$`MFI-`))/(2*as.numeric(df$`rSD-`))
-    # print(si)
+    
+    
+    si <- as.numeric(ifelse(sapply(as_tibble(rep(NA, length(si))), function(i) { df$`rSD-` == 0 | is.na(df$`rSD-`) }), NA, si))
+    
     df <- cbind(df, "Stain Index"=si)
     
     p <- ggplot(df, aes(x=as.factor(Condition), y=`Stain Index`, group=Concentration, color=as.factor(Concentration))) + 
@@ -679,6 +666,8 @@ stain_index <- function(df){
         theme(text=element_text(size = 11),
               legend.position = "bottom") +
         ylim(0,NA)
+    # +
+    #     ylim(0,NA)
     
     return(p)
 }
@@ -766,9 +755,7 @@ loop_through_for_summary <- function(data_directory, wave_summary_file, sheet, w
                   )
     wave_summary <- readxl::read_xlsx(wave_summary_file, sheet=sheet)
     files_to_analyze <- wave_summary$Filename
-    # for(file in unique(files_to_analyze)){
-    #     print(file)
-    # }
+    
     for(file in unique(files_to_analyze)){
         df <- read_csv(paste0(data_directory, "\\", paste0(file, ".csv")), col_types = cols())
 
