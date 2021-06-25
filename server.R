@@ -74,7 +74,7 @@ server = function(input, output) {
         req(input$raw_upload)
         if(input$analysis_type == "OMIQ"){
             tagList(
-                br(),
+                
                 uiOutput('cell_pop_ui')
             )
         }
@@ -203,12 +203,19 @@ server = function(input, output) {
     ## STEP 1: Upload Raw Stats (without % 4C Reference MFI Data)
     raw_upload_data_prelim <- reactive({
         inFile <- input$raw_upload
+        ext <- tools::file_ext(input$raw_upload$name)
         if(is.null(inFile))
             return(NULL)
         else if(input$analysis_type == "Manual"){
+            
+            ifelse(ext != "xlsx", validate("Invalid file input extension. Please upload a .xlsx file only."), NA)
+            
             df <- readxl::read_xlsx(inFile$datapath)
         }
         else if(input$analysis_type == "OMIQ"){
+            
+            ifelse(ext != "csv", validate("Invalid file input extension.. Please upload a .csv file only."), NA)
+            
             df <- readr::read_csv(inFile$datapath)
         }
         
@@ -541,9 +548,12 @@ server = function(input, output) {
     ## Step 8: Quality checks: model coefficient p-value & R-squared value
     
     # All model coefficient p-values
-    poly_eval <- reactive({ polynomial_evaluation_of_linearity(keep(), poly_order()) })
+    poly_eval <- reactive({ 
+        req(raw_upload_data())
+        polynomial_evaluation_of_linearity(keep(), poly_order()) 
+    })
     model_p_value <- reactive({  
-        
+        req(raw_upload_data())
         if(poly_order() == 1){
             
             p_val <- format(round(poly_eval()$b_pvalue,3),nsmall=3)

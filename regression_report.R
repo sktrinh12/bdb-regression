@@ -206,6 +206,7 @@ anderson_darling_p_value_png <- function(p_value){
     
     png("anderson_darling_p_value.png", width=1200, height=800, units="px")
     print(ad_p_value_df)
+    dev.off()
 }
 
 regression_pdf <- function(regress_plot, reference_mfi_table, shelf_life_summary_table, cell_pop, marker_name, optimal, notes){
