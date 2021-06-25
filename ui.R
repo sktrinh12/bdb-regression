@@ -53,9 +53,7 @@ ui = tagList(
                                   
                                   uiOutput('table_title'),
                                   br(),
-                                  DT::dataTableOutput("reference_mfi_data_table"),
-                                  br()
-                                  # DT::dataTableOutput("kept_excluded_table")      
+                                  DT::dataTableOutput("reference_mfi_data_table_keep_only")
                          ),tabPanel("Plots",
                                     br(),
                                     fluidRow(column(6,plotOutput('mfi_vs_concentration')),

@@ -408,6 +408,16 @@ server = function(input, output) {
             formatRound(columns=c(2:ncol(df)), 0)
     })
     
+    reference_MFI_data_to_include_from_keep <- reactive({
+        create_reference_MFI_table_wide_with_keeps(keep())
+    })
+    output$reference_mfi_data_table_keep_only <- DT::renderDataTable({ 
+        if (is.null(input$raw_upload)) {
+            return (NULL)
+        }
+        reference_MFI_data_to_include_from_keep()
+    })
+    
     ## Step 4: 'Melt' % of 4C Reference MFI Data w/ selected concentrations
     selected_melted_data <- reactive({ melt_reference_mfi_table(reference_MFI_data_to_include()) })
     
@@ -415,7 +425,7 @@ server = function(input, output) {
 
     # For storing which rows have been excluded
     vals <- reactiveValues(
-        keeprows = rep(TRUE, 64)
+        keeprows = rep(TRUE, 56)
     )
     # Update values of included rows whenever new data is uploaded
     observeEvent(input$raw_upload, {
@@ -899,6 +909,7 @@ server = function(input, output) {
         )
         report <- build_regression_report_gui_modified(
             keep(),
+            # keep(),
             poly_order(),
             as.numeric(input$CI),
             as.numeric(input$threshold),
@@ -931,14 +942,7 @@ server = function(input, output) {
     )
     
     
-    kept_excluded <- reactive({
-        create_reference_MFI_table_wide_color_excludes(raw_upload_data_with_perct_MFI(), keep(), exclude())
-    })
-    output$kept_excluded_table <- renderDataTable({ 
-        req(input$raw_upload)
-        # kept_excluded() 
-        exclude()
-    })
+    
     
     ######################## RESIDUAL PLOTS ###################################
     ########################## Powerpoint Output ##############################
@@ -1110,7 +1114,7 @@ server = function(input, output) {
                     location = ph_location_type(type = "title")
                 ) %>%
                 ph_with(
-                    value = flextable(reference_MFI_data_to_include(), cwidth=0.65) %>%
+                    value = flextable(reference_MFI_data_to_include_from_keep(), cwidth=0.65) %>%
                         add_header_lines("% of 4C Reference MFI") %>%
                         bold(i = 1:2, bold = TRUE, part = "header") %>%
                         align(align="center", part="all")  %>%

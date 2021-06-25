@@ -33,7 +33,7 @@ configure_stats <- function(stats, pop){
     
 }
 
-get_stats_table_for_mfi_table <- function(stats_file, cell_pop){
+get_stats_table_for_mfi_table <- function(stats_file, cell_pop, keep){
     
     ## Step 1a: Read in raw stats
     stats <- read_csv(stats_file, col_types = cols()) 
@@ -45,7 +45,7 @@ get_stats_table_for_mfi_table <- function(stats_file, cell_pop){
     df <- calculate_perct_4C_MFI(df)
     
     ## Step 3a: Transform % of 4C Reference MFI data to wide ##
-    df <- create_raw_reference_MFI_table_wide(df)
+    df <- create_reference_MFI_table_wide_with_keeps(keep)
     
     return(df)
 }
@@ -206,7 +206,7 @@ anderson_darling_p_value_png <- function(p_value){
     
     png("anderson_darling_p_value.png", width=1200, height=800, units="px")
     print(ad_p_value_df)
-    dev.off()
+    # dev.off()
 }
 
 regression_pdf <- function(regress_plot, reference_mfi_table, shelf_life_summary_table, cell_pop, marker_name, optimal, notes){
@@ -408,7 +408,7 @@ build_regression_report_per_cell_pop <- function(data_path, stats_file){
 
 get_marker_name <- function(stats_file){
     stats_df <- read_csv(stats_file, col_types = cols())
-    print(stats_df)
+    
     marker_name <- paste(unique(stats_df$Target.Species), 
                          unique(stats_df$Specificity..CD.), 
                          unique(stats_df$Clone), 
@@ -459,7 +459,7 @@ regression_gui_title_page = function(cell_pop, marker_name, order, ci, mfi_thres
 }
 build_regression_report_gui_modified <- function(df_melt, order, ci, threshold_mfi, stats_file, cell_pop, marker_name, optimal, notes){
 
-    df <- get_stats_table_for_mfi_table(stats_file, cell_pop)
+    df <- get_stats_table_for_mfi_table(stats_file, cell_pop, df_melt)
     
     df_melt <- na.omit(df_melt)
     
