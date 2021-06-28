@@ -775,6 +775,9 @@ server = function(input, output) {
             )
     })
     
+    
+    
+    
     raw_model_pvalue_color <- reactive({
         if( raw_poly_eval()$b_pvalue >= 0.05 ){ ## Model coeff. not statistically significant
            return("red")
@@ -1062,6 +1065,8 @@ server = function(input, output) {
                         align(align="center", part="all") %>%
                         fontsize(size = 14, part = "body") %>%
                         color(i = 1, j = 4, color = raw_model_pvalue_color()) %>%
+                        color(i = 1, j = 1, color = shelf_life_color(raw_lower_shelf_life())) %>%
+                        color(i = 1, j = 2, color = shelf_life_color(rounded_shelf_life(raw_lower_shelf_life()))) %>%
                         hline_top(part = "all", border = fp_border(color="black", width=2)) %>%
                         font(fontname = fontname, part = "all"),
                     location = ph_location_type(type = "body", position_right = F, position_top = F)
@@ -1139,6 +1144,8 @@ server = function(input, output) {
                         align(align="center", part="all") %>%
                         fontsize(size = 14, part = "body") %>%
                         color(i = 1, j = 4, color = modified_model_pvalue_color()) %>%
+                        color(i = 1, j = 1, color = shelf_life_color(lower_shelf_life())) %>%
+                        color(i = 1, j = 2, color = shelf_life_color(rounded_shelf_life(lower_shelf_life()))) %>%
                         hline_top(part = "all", border = fp_border(color="black", width=2)) %>%
                         font(fontname = fontname, part = "all"),
                     location = ph_location_type(type = "body", position_right = F, position_top = F)

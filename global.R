@@ -396,6 +396,14 @@ rounded_shelf_life <- function(shelf_life){
     return(shelf_life)
 }
 
+shelf_life_color <- function(shelf_life){
+    if( shelf_life < 0 ){ # If shelf-life is negative, font --> yellow
+        return("#fcba03")
+    }
+    return("#000000") # Else font --> black
+    
+}
+
 find_confidence_bands <- function(df_melt, order, CI, threshold_y) {
     
     df_melt <- na.omit(df_melt)
