@@ -21,6 +21,20 @@ template_data <- tibble('Time'=c(0,0.5,1,1.5,2,3,4,5),
                             'Conc_2000_ng'=rep(NA, 8)
 )
 
+add_sample_or_control_column <- function(df){
+    ## Repeat "control" or "sample" for length of unique concentrations
+    control_rep <- rep("control", length(unique(df$Concentration)))
+    sample_rep <- rep("sample", length(unique(df$Concentration)))
+    
+    ## Determine # of rows to repeat pattern for
+    unique_rows <- length(unique(df$Plate.Row))
+    unique_pops <- length(unique(df$pop))
+    
+    ## Add sample or control column to stats file
+    df <- df %>% add_column("Sample or Control" = rep(c(control_rep, sample_rep), unique_rows*unique_pops))
+    return(df)
+}
+
 regression_plot_global <- function(text_size, data_point_size, eqn_size, df, confidence_bands, order, CI, eqn_location, eqn_location2){
     
     p <- ggplot(df, aes(x=Time, y=value, color=Concentrations)) + 
@@ -71,11 +85,6 @@ concentration_choiceValues <- function(choiceNames){
     return(choiceValues)
 }
 
-# df$`%+` <- ifelse(sapply(as_tibble(rep(NA, length(df$`%+`))), function(i) { df$`%+` == "n/a" | df$`%+` == "#N/A" }), NA, df$`%+`)
-# df$`MFI+` <- ifelse(sapply(as_tibble(rep(NA, length(df$`MFI+`))), function(i) { df$`MFI+` == "n/a" | df$`MFI+` == "#N/A" }), NA, df$`MFI+`)
-# df$`MFI-` <- ifelse(sapply(as_tibble(rep(NA, length(df$`MFI-`))), function(i) { df$`MFI-` == "n/a" | df$`MFI-` == "#N/A" }), NA, df$`MFI-`)
-# df$`rSD-` <- ifelse(sapply(as_tibble(rep(NA, length(df$`rSD-`))), function(i) { df$`rSD-` == "n/a" | df$`rSD-` == "#N/A" }), NA, df$`rSD-`)
-
 
 ## Calculate the % of 4C Reference MFI data from the uploaded stats
 calculate_perct_4C_MFI <- function(df){
@@ -84,7 +93,6 @@ calculate_perct_4C_MFI <- function(df){
     df$`MFI+` <- as.numeric(ifelse(sapply(as_tibble(rep(NA, length(df$`MFI+`))), function(i) { df$`MFI+` == "n/a" | df$`MFI+` == "#N/A" }), NA, df$`MFI+`))
     df$`MFI-` <- as.numeric(ifelse(sapply(as_tibble(rep(NA, length(df$`MFI-`))), function(i) { df$`MFI-` == "n/a" | df$`MFI-` == "#N/A" }), NA, df$`MFI-`))
     df$`rSD-` <- as.numeric(ifelse(sapply(as_tibble(rep(NA, length(df$`rSD-`))), function(i) { df$`rSD-` == "n/a" | df$`rSD-` == "#N/A" }), NA, df$`rSD-`))
-    
     
     
     df <- df %>% arrange(Concentration, Condition)
@@ -714,7 +722,7 @@ percent_positive <- function(df){
  
 percent_of_4C_MFI <- function(df){
     
-    p <- ggplot(df, aes(x=as.factor(Condition), y=as.numeric(`%+`), group=Concentration, color=as.factor(Concentration))) + 
+    p <- ggplot(df, aes(x=as.factor(Condition), y=as.numeric(`% 4C Reference MFI`), group=Concentration, color=as.factor(Concentration))) + 
         geom_point(size=4) + 
         geom_line(size=1) + 
         scale_colour_brewer(palette="Dark2", labels=unique(paste0(df$Concentration, " ng/test"))) +

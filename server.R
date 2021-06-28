@@ -219,6 +219,7 @@ server = function(input, output) {
             ifelse(ext != "csv", validate("Invalid file input extension.. Please upload a .csv file only."), NA)
             
             df <- readr::read_csv(inFile$datapath)
+            df <- add_sample_or_control_column(df)
         }
         
         return(df)
@@ -270,7 +271,7 @@ server = function(input, output) {
     })
     output$percent_of_4C_MFI <- renderPlot({
         req(input$raw_upload)
-        percent_of_4C_MFI(raw_upload_data())
+        percent_of_4C_MFI(raw_upload_data_with_perct_MFI())
     })
     ## Step 4a: Create wide table of % 4C Reference MFI Data for UI ONLY
     raw_reference_MFI_data_wide_UI_only <- reactive({
