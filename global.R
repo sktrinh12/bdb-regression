@@ -363,7 +363,7 @@ solve_for_lower_shelf_life <- function(df_melt, order, CI, threshold_y){
         shelf_life_lower = NULL
         return(shelf_life_lower)
     })
-    return(shelf_life_lower)
+    return(round(shelf_life_lower,2))
 }
 
 rounded_shelf_life <- function(shelf_life){
@@ -374,10 +374,11 @@ rounded_shelf_life <- function(shelf_life){
         return(shelf_life)
         
     }
+    
     ## Rounding rules:
-    ## 1. Round down to nearest half integer
-    ## 2. If a half or whole integer, still round down to next half integer
-    ## 3. If 1.5yrs, don't round down
+    ## 1. If greater than 5 years, round down to 5 years to avoid extrapolation
+    ## 2. If 1.5yrs, don't round down
+    ## 3. Otherwise, round down to nearest half integer
     
     # If shelf-life is greater than 5 years, round down to 5 years to avoid extrapolation
     else if(shelf_life > 5){
@@ -387,16 +388,12 @@ rounded_shelf_life <- function(shelf_life){
     else if(shelf_life <= 1.5){
         shelf_life <- shelf_life
     }
-    # If shelf-life is a whole # or half integer (ex. 4.0 or 3.5), round down to next nearest half integer
-    else if(shelf_life %% 0.5 == 0){
-        shelf_life <- floor((shelf_life - 0.1) / 0.5) * 0.5
-    }
     # Otherwise, round down to nearest half integer
     else{
         shelf_life <- floor(shelf_life / 0.5) * 0.5
     }
     
-    return(round(shelf_life,1))
+    return(shelf_life)
 }
 
 find_confidence_bands <- function(df_melt, order, CI, threshold_y) {

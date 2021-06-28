@@ -10,6 +10,8 @@ ui_eqn_size <- 5
 reports_font_size <- 12
 reports_data_point_size <- 4
 reports_eqn_size <- 5
+RAW_SL_TO_DAYS <- 365.25
+SAP_SL_TO_DAYS <- 360
 
 fontname <- "Arial"
 
@@ -519,6 +521,7 @@ server = function(input, output) {
             )
         })
     
+    ## apply rounding ruleset
     rounded_modified_lower_shelf_life <- reactive({
         rounded_shelf_life(lower_shelf_life())
     })
@@ -533,23 +536,23 @@ server = function(input, output) {
             )
         }
         else{
-            tags$i(paste0(round(lower_shelf_life(),2), ' years   ', '(', 
-                          round(as.numeric(lower_shelf_life())*365,0), ' days)'),
+            tags$i(paste0(lower_shelf_life(), ' years   ', '(', 
+                          round(as.numeric(lower_shelf_life())*RAW_SL_TO_DAYS,0), ' days)'),
                    style="color: #eb6864; font-size: 20px; font-style: normal; font-weight: bold;"
             )
         }
     })
     output$check_rounded_shelf_life <- renderUI({
         req(input$raw_upload)
-        if(is.null(rounded_modified_lower_shelf_life())){
+        if(is.null(rounded_shelf_life(lower_shelf_life()))){
             tags$i(" Does not intersect with MFI Threshold - No Shelf-life can be found",
                    class = "fa fa-times-circle", 
                    style = "color: red; font-size: 20px;"
             )
         }
         else{
-            tags$i(paste0(round(rounded_modified_lower_shelf_life(),1), ' years   ', '(', 
-                          round(as.numeric(rounded_modified_lower_shelf_life())*365,0), ' days)'),
+            tags$i(paste0(rounded_shelf_life(lower_shelf_life()), ' years   ', '(', 
+                          round(as.numeric(rounded_shelf_life(lower_shelf_life()))*SAP_SL_TO_DAYS,0), ' days)'),
                    style="color: #eb6864; font-size: 20px; font-style: normal; font-weight: bold;"
             )
         }
@@ -734,8 +737,10 @@ server = function(input, output) {
     
     raw_shelf_life_summary_flextable <- reactive({ 
         df <- tibble(
-            "Raw Shelf-Life" = c(paste0(round(raw_lower_shelf_life(),1), " yrs (", round(raw_lower_shelf_life()*365,0), " days)")),
-            "Rounded Shelf-Life" = c(paste0(rounded_raw_lower_shelf_life(), " yrs (", round(rounded_raw_lower_shelf_life()*365,0), " days)")),
+            "Raw Shelf-Life" = c(paste0(raw_lower_shelf_life(), " yrs (", 
+                                        round(raw_lower_shelf_life()*RAW_SL_TO_DAYS,0), " days)")),
+            "Rounded Shelf-Life" = c(paste0(rounded_shelf_life(raw_lower_shelf_life()), " yrs (", 
+                                            round(rounded_shelf_life(raw_lower_shelf_life())*SAP_SL_TO_DAYS,0), " days)")),
             "R-squared" = c(raw_R_sq_val()),
             "Model p-value"=c(model_p_value())
         )
@@ -743,10 +748,10 @@ server = function(input, output) {
     
     modified_shelf_life_summary_flextable <- reactive({ 
         df <- tibble(
-            "Raw Shelf-Life" = c(paste0(round(lower_shelf_life(),1), " yrs (", 
-                                        round(lower_shelf_life()*365,0), " days)")),
-            "Rounded Shelf-Life" = c(paste0(rounded_modified_lower_shelf_life(), " yrs (", 
-                                            round(rounded_modified_lower_shelf_life()*365,0), " days)")),
+            "Raw Shelf-Life" = c(paste0(lower_shelf_life(), " yrs (", 
+                                        round(lower_shelf_life()*RAW_SL_TO_DAYS,0), " days)")),
+            "SAP Shelf-Life" = c(paste0(rounded_shelf_life(lower_shelf_life()), " yrs (", 
+                                        round(rounded_shelf_life(lower_shelf_life())*SAP_SL_TO_DAYS,0), " days)")),
             "R-squared" = c(format(round(R_sq_val(),2),nsmall=2)),
             "Model p-value"=c(model_p_value())
         )

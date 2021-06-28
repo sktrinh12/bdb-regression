@@ -91,7 +91,7 @@ ui = tagList(
                                               ))),
                                               uiOutput('check_lower_shelf_life'),
                                               h4(p(
-                                                  strong("Predicted Shelf-Life (Rounded)")
+                                                  strong("Predicted Shelf-Life (SAP)")
                                               )),
                                               uiOutput('check_rounded_shelf_life'),
                                               h4(p(
