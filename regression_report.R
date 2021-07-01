@@ -23,8 +23,10 @@ EQN_SIZE = 10
 
 ## Step 1: Upload raw stats ##
 configure_stats <- function(stats, pop){
-    
-    stats <- stats[!is.na(stats$SI),] %>% arrange(Concentration)
+    if(unique(stats$units) == "ug/test"){
+        stats$Concentration <- stats$Concentration * 1000 # convert to ng/test
+    }
+    stats <- stats[stats$`Sample or Control` == "sample",] %>% arrange(Concentration)
     stats_pop <- stats[stats$pop == pop,]
     
     stats_pop <- stats_pop %>% select(Stability.Time.point, Concentration, `%+`, `MFI+`, `MFI-`, `rSD-`)
@@ -38,7 +40,10 @@ get_stats_table_for_mfi_table <- function(stats_file, cell_pop, keep){
     ## Step 1a: Read in raw stats
     stats <- read_csv(stats_file, col_types = cols()) 
     
-    ## Step 1: Upload raw stats ##
+    ## Step 1b: Add 'Sample or Control' column to stats input
+    stats <- add_sample_or_control_column(stats)
+    
+    ## Step 1c: Upload raw stats ##
     df <- configure_stats(stats, cell_pop)
     
     ## Step 2: Calculate % of 4C Reference MFI ##
