@@ -19,7 +19,7 @@ FONT_SIZE = 22
 EQN_SIZE = 10
 
 # source('omiq_regression.R')
-# source('global.R')
+source('global.R')
 
 ## Step 1: Upload raw stats ##
 configure_stats <- function(stats, pop){

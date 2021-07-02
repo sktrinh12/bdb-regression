@@ -237,7 +237,6 @@ server = function(input, output) {
                                   as.character(input$cell_pop_input)
                                   )
         }
-        
         return(df)
     })
     
@@ -1009,11 +1008,11 @@ server = function(input, output) {
                     location = ph_location_type(type = "title")
                 ) %>%
                 ph_with(
-                    value = stain_index(raw_upload_data()), 
+                    value = suppressWarnings(stain_index(raw_upload_data())), 
                     location = ph_location_type(type = "body", index = 4, position_right = F)
                 ) %>%
                 ph_with(
-                    value = signal_to_noise(raw_upload_data()), 
+                    value = suppressWarnings(signal_to_noise(raw_upload_data())), 
                     location = ph_location_type(type = "body", index = 3, position_right = T)
                 ) %>%
                 ph_with(
@@ -1031,7 +1030,7 @@ server = function(input, output) {
                     location = ph_location_type(type = "body", index = 4, position_right = F)
                 ) %>%
                 ph_with(
-                    value = percent_of_4C_MFI(raw_upload_data()), 
+                    value = percent_of_4C_MFI(raw_upload_data_with_perct_MFI()), 
                     location = ph_location_type(type = "body", index = 3, position_right = T)
                 ) %>%
                 ph_with(

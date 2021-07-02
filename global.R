@@ -658,11 +658,9 @@ mfi_vs_time_plot <- function(df){
 }
 
 stain_index <- function(df){
-    
     si = (as.numeric(df$`MFI+`) - as.numeric(df$`MFI-`))/(2*as.numeric(df$`rSD-`))
     
-    
-    si <- as.numeric(ifelse(sapply(as_tibble(rep(NA, length(si))), function(i) { df$`rSD-` == 0 | is.na(df$`rSD-`) }), NA, si))
+    si <- as.numeric(ifelse(sapply(as_tibble(rep(NA, length(si))), function(i) { as.numeric(df$`rSD-`) == 0 | is.na(df$`rSD-`) }), NA, si))
     
     df <- cbind(df, "Stain Index"=si)
     
@@ -677,8 +675,6 @@ stain_index <- function(df){
         theme(text=element_text(size = 11),
               legend.position = "bottom") +
         ylim(0,NA)
-    # +
-    #     ylim(0,NA)
     
     return(p)
 }
@@ -721,19 +717,18 @@ percent_positive <- function(df){
 }
  
 percent_of_4C_MFI <- function(df){
-    
-    p <- ggplot(df, aes(x=as.factor(Condition), y=as.numeric(`% 4C Reference MFI`), group=Concentration, color=as.factor(Concentration))) + 
-        geom_point(size=4) + 
-        geom_line(size=1) + 
+    p <- ggplot(df, aes(x=as.factor(Condition), y=as.numeric(`% 4C Reference MFI`), group=Concentration, color=as.factor(Concentration))) +
+        geom_point(size=4) +
+        geom_line(size=1) +
         scale_colour_brewer(palette="Dark2", labels=unique(paste0(df$Concentration, " ng/test"))) +
         labs(title = '% of 4C Reference MFI',
-             x = 'Time (years)', 
+             x = 'Time (years)',
              y = '%',
              color = "Concentration") +
         theme(text=element_text(size = 11),
               legend.position = "bottom") +
         ylim(0,NA)
-    
+
     return(p)
 }
 
