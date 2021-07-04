@@ -42,9 +42,8 @@ ui = tagList(
                          textInput('threshold', '% of 4C Reference MFI Threshold', value=75),
                          uiOutput('concentration_checkGroupInput'),
                          br(),
-                         uiOutput('PPT_cell_pops'),
-                         br(),
-                         uiOutput("omiq_report_bundle_ui")
+                         uiOutput('downloadable_outputs_ui'),
+                         br()
                      )
                  ),
                  mainPanel(

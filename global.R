@@ -8,18 +8,6 @@ library(readxl)
 library(hash)
 library(tidyr)
 library(tibble)
-# order <- 2
-
-template_data <- tibble('Time'=c(0,0.5,1,1.5,2,3,4,5), 
-                            'Conc_15_ng'=rep(NA, 8),
-                            'Conc_30_ng'=rep(NA, 8), 
-                            'Conc_60_ng'=rep(NA, 8),
-                            'Conc_125_ng'=rep(NA, 8),
-                            'Conc_250_ng'=rep(NA, 8),
-                            'Conc_500_ng'=rep(NA, 8),
-                            'Conc_1000_ng'=rep(NA, 8),
-                            'Conc_2000_ng'=rep(NA, 8)
-)
 
 add_sample_or_control_column <- function(df){
     ## Repeat "control" or "sample" for length of unique concentrations
@@ -191,7 +179,7 @@ concentrations_around_optimal <- function(optimal){
     return(conc_around_optimal)
 }
 
-melt_reference_mfi_table <- function(df_full=template_data){
+melt_reference_mfi_table <- function(df_full=NULL){
     # Melt Columns by Time
     dataMelt <- melt(df_full, "Time", variable='Concentrations')
     dataMelt <- cbind(dataMelt, 'Labels'=paste0(parse_number(as.character(dataMelt$Concentrations)), ' ng/test'))

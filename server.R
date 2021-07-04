@@ -17,25 +17,34 @@ fontname <- "Arial"
 
 server = function(input, output) {
     
-    ########################## TEMPLATE DATA ##########################
-    template_data <- tibble('Time'=c(0,0.5,1,1.5,2,3,4,5), 
-                            'Conc_15_ng'=rep(NA, 8),
-                            'Conc_30_ng'=rep(NA, 8), 
-                            'Conc_60_ng'=rep(NA, 8),
-                            'Conc_125_ng'=rep(NA, 8),
-                            'Conc_250_ng'=rep(NA, 8),
-                            'Conc_500_ng'=rep(NA, 8),
-                            'Conc_1000_ng'=rep(NA, 8),
-                            'Conc_2000_ng'=rep(NA, 8),
-                            row.names=NULL
+    # Download Template Stats File
+    output$download_template_file <- downloadHandler(
+        filename <- function() {
+            paste("stats_template", "xlsx", sep=".")
+        },
+        content = function(file) {
+            file.copy('stability_stats_template.xlsx', file)
+        },
+        contentType = "text/xlsx"
+    )
+    # Download Example Stats File
+    output$download_example_file <- downloadHandler(
+        filename <- function() {
+            paste("stats_example", "xlsx", sep=".")
+        },
+        content = function(file) {
+            file.copy('stability_stats_example.xlsx', file)
+        },
+        contentType = "text/xlsx"
     )
     
+    # fileInput UI based on analysis type selected
     output$manual_or_omiq <- renderUI({
         
         if(input$analysis_type == "Manual"){
             tagList(div(style = "display: grid; grid-template-columns: 250px 250px;",
                         div(style = "padding:5px;", downloadButton("download_template_file", "Download Stats Template")),
-                        div(style = "padding:5px;", downloadButton("downloadExample", "Download Stats Example"))),
+                        div(style = "padding:5px;", downloadButton("download_example_file", "Download Stats Example"))),
                     br(),
                     div(style = "display: grid; grid-template-columns: auto;",
                         fileInput("raw_upload","Choose stats file to upload",
@@ -56,7 +65,29 @@ server = function(input, output) {
         
     })
     
-    output$PPT_cell_pops <- renderUI({
+    # If OMIQ analysis, add marker name and selectInput to select cell pops to analyze
+    output$manual_or_omiq_cell_pop <- renderUI({
+        req(input$raw_upload)
+        if(input$analysis_type == "OMIQ"){
+            tagList(
+                tags$head(tags$style("
+                  #marker_name_output{
+                  display:inline
+                  }")),
+                strong('Marker Name: ',style="display:inline;"), textOutput("marker_name_output"),
+                br(),
+                br(),
+                selectInput('cell_pop_input', "Select Cell Population", choices = c(unique(
+                    readr::read_csv(input$raw_upload$datapath)$pop)))
+            )
+        }
+        else{
+            tagList()
+        }
+    })
+    
+    # rendering UI for downloadable output options
+    output$downloadable_outputs_ui <- renderUI({
         if(input$analysis_type == "Manual"){
             tagList(
                 fluidRow(
@@ -67,133 +98,29 @@ server = function(input, output) {
                     column(4,radioButtons('pop_number','Cell Pop #',
                                           choices = c("P1", "P2", "P3"),
                                           inline = TRUE)
-                    ))
-            )
-        }
-    })
-    
-    output$manual_or_omiq_cell_pop <- renderUI({
-        req(input$raw_upload)
-        if(input$analysis_type == "OMIQ"){
-            tagList(
+                    )),
+                br(),
+                div(style = "display: grid; grid-template-columns: 250px 250px; padding: 5px;",
+                    div(textInput("filename_output", "Name Final PPT", placeholder = "Exclude .pptx")),
+                    div(style = "display: flex; align-items: center; justify-content: center; padding-top: 10px", 
+                        downloadButton("pptx_id", "Download PPT", class = "btn-primary")))
                 
-                uiOutput('cell_pop_ui')
             )
         }
-        else{
-            tagList()
-        }
-    })
-    output$cell_pop_ui <- renderUI({
-        # req(input$raw_upload)
-        # validate(
-        #     need(input$cell_pop_input != "", "Wait for cell population list to load") # display custom message in need
-        # )
-        tagList(
-            tags$head(tags$style("
-                  #marker_name_output{
-                  display:inline
-                  }")),
-            strong('Marker Name: ',style="display:inline;"), textOutput("marker_name_output"),
-            br(),
-            # div(style="display: inline", p(span(style="color:blue; font-weight:bold","Marker Name: "), textOutput('marker_name_output'))),
-            # textOutput('marker_name_output'),
-            # div(style="display:inline",paste0(strong('Marker Name: '), textOutput("marker_name_output"))),
-            br(),
-            selectInput('cell_pop_input', "Select Cell Population", choices = c(unique(
-                readr::read_csv(input$raw_upload$datapath)$pop
-            )))
-        )
-    })
-    
-    output$omiq_report_bundle_ui <- renderUI({
-        if(input$analysis_type == "Manual"){
-            tagList(div(style = "display: grid; grid-template-columns: 250px 250px; padding: 5px;",
-                        div(textInput("filename_output", "Name Final PPT", placeholder = "Exclude .pptx")),
-                        div(style = "display: flex; align-items: center; justify-content: center; padding-top: 10px", 
-                            downloadButton("pptx_id", "Download PPT", class = "btn-primary"))),
-            )
-        }
-        else{
+        else if(input$analysis_type == "OMIQ"){
             tagList(
                 downloadButton("regression_report", "Download Individual Regression Report", class = "btn-primary"),
-                # uiOutput('download_final_reports_ui'),
-                # conditionalPanel(
-                #     condition = "input.regression_report != 0", 
-                #     tagList(
                 br(),
                 br(),
                 fileInput('regression_reports_indiv', "Upload Individual Regression Report", multiple = TRUE, accept = c('.pdf')),
-                
-                fileInput(
-                    "omiq_report_upload",
-                    "Upload OMIQ Stability Report",
-                    accept = c(".pdf")
-                ),
+                fileInput("omiq_report_upload","Upload OMIQ Stability Report",accept = c(".pdf")),
                 downloadButton("regression_report_bundled", "Download Bundled Regression Report", class = "btn-primary"),
                 br()
-                    # )
-                # )
-                # br(),
-                # br(),
-                # fileInput('regression_reports_indiv', "Upload generated regression report", multiple = TRUE, accept = c('.pdf')),
-                # fileInput(
-                #     "omiq_report_upload",
-                #     "Upload OMIQ Stability Report",
-                #     accept = c(".pdf")
-                # ),
-                # downloadButton("regression_report_bundled", "Download Bundled Regression Report", class = "btn-secondary")
             )
         }
     })
+
     
-    output$download_final_reports_ui <- renderUI({
-        conditionalPanel(
-        condition = "input.regression_report > '0'", 
-            tagList(
-                br(),
-                br(),
-                fileInput('regression_reports_indiv', "Upload generated regression report", multiple = TRUE, accept = c('.pdf')),
-                fileInput(
-                    "omiq_report_upload",
-                    "Upload OMIQ Stability Report",
-                    accept = c(".pdf")
-                ),
-                downloadButton("regression_report_bundled", "Download Bundled Regression Report", class = "btn-secondary")
-            )
-        )
-    })
-    
-    
-    
-    # Download Template Stats File
-    output$downloadData <- downloadHandler(
-        filename = 'stability_stats_template.csv',
-        content = function(file) {
-            write.csv(template_data, file, row.names=FALSE)
-        }
-    )
-    
-    output$download_template_file <- downloadHandler(
-        filename <- function() {
-            paste("stats_template", "xlsx", sep=".")
-        },
-        content = function(file) {
-            file.copy('stability_stats_template.xlsx', file)
-        },
-        contentType = "text/xlsx"
-    )
-    ########################## EXAMPLE DATA ###########################
-    # Download Example Stats File
-    output$downloadExample <- downloadHandler(
-        filename <- function() {
-            paste("stats_example", "xlsx", sep=".")
-        },
-        content = function(file) {
-            file.copy('stability_stats_example.xlsx', file)
-        },
-        contentType = "text/xlsx"
-    )
     
     ############################### GUI ONLY ########################################
     ## Model Criteria User Inputs from GUI
@@ -382,15 +309,16 @@ server = function(input, output) {
                 )
         })
     
+    ## Reactive expression capturing the selected concentrations to include in the analysis
     concentrations_to_include_list <- reactive({ 
         req(input$concentrations_to_include)
-        unlist(strsplit(input$concentrations_to_include, " ")) })
-    output$concentrations_to_include_list_output <- renderTable({ concentrations_to_include_list() })
+        unlist(strsplit(input$concentrations_to_include, " ")) 
+    })
     
     ## Step 3b: Selected % of 4C Reference MFI Data (based on concentrations selected in UI)
     reference_MFI_data_to_include <- reactive({
         if(is.null(input$raw_upload)){
-            return(template_data)
+            return(NULL)
         }
         return(concentrations_to_keep(raw_reference_MFI_data_wide_UI_only(), concentrations_to_include_list()))
     })
@@ -400,16 +328,6 @@ server = function(input, output) {
         h3("% of 4C Reference MFI") 
     })
     ## Step 3c: Output % of 4C Reference MFI Data Table to UI
-    output$reference_mfi_data_table <- DT::renderDataTable({
-        if (is.null(input$raw_upload)) {
-            return (NULL)
-        }
-        df <- reference_MFI_data_to_include()
-        DT::datatable(df) %>%
-            formatRound(columns=c(1), 1) %>%
-            formatRound(columns=c(2:ncol(df)), 0)
-    })
-    
     reference_MFI_data_to_include_from_keep <- reactive({
         create_reference_MFI_table_wide_with_keeps(keep())
     })

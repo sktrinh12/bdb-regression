@@ -1,0 +1,111 @@
+---
+title: "Stability Regression App README"
+author: "Rachel Molloy"
+date: "7/4/2021"
+output: html_document
+---
+
+# **Regression for Stability**
+This app is used for Stability studies to dynamically conduct a regression analysis and predict the shelf-life of BDB Research Reagents. There are two workflows this app will support: the Manual and the OMIQ Workflow.
+
+*Manual Workflow*: The experimental data was gated/analyzed manually using FlowJo (the stats generated from FlowJo must be copied into the template and uploaded to the App, although the template is structured very similarly to what the team is currently using).
+
+*OMIQ Workflow*: The experimental data was gated/analyzed using the OMIQ pipeline. An initial regression analysis and shelf-life prediction was already conducted during the execution of OMIQ, but changes may be necessary to the analysis. Therefore, the team may need to use the App to do a dynamic data review, in which case they would upload their OMIQ reports and the `all_stats.csv` file from OMIQ. 
+
+The only differences between the Manual Workflow and OMIQ Workflow in terms of Stability Regression App usage are the sidebar panel layout and user inputs/uploads, and the downloadable output formats.
+
+***
+
+## Sidebar Panel
+
+The sidebar panel using multiple renderUIs based on the `input$analysis_type`:
+
+```r
+uiOutput('manual_or_omiq')
+```
+This renders the 2 `downloadButton`s for the Stats Template and Example if the Manual analysis option is selected, and the `fileInput` for the stats file to be uploaded. Both the Manual and OMIQ analysis types use the same `input$raw_upload` `fileInput` id, but accept different file types (Manual accepts .xlsx files, OMIQ accepts .csv files since that is the file type to which OMIQ outputs the stats). 
+
+```r
+uiOutput('manual_or_omiq_cell_pop')
+```
+This renders the Marker Name text outputted to the sidebar panel, as well as a `selectInput` option to select the cell population to analyze, if `input$analysis_type == "OMIQ"`. The list of cell populations to analyze is based on a list of unique cell populations found in the "pop" column of the `all_stats.csv` file. If the Manual analysis option is selected, nothing additional outputs to the UI.
+
+Several user input parameters used to establish the model and criteria for selecting shelf-life are shown on the sidebar panel for both analysis types:
+```r
+radioButtons('polynomial_order', "Order of Polynomial", ..., selected = "Linear", ...) # select model polynomial order
+selectInput('CI', 'Confidence Interval', ..., selected = 0.95) # select confidence interval to use and find shelf-life from
+textInput('threshold', '% of 4C Reference MFI Threshold', value=75) # MFI Threshold to find shelf-life from
+```
+The defaults selected are default values used in the OMIQ regression report scripts, and have been established by the team as criteria to use for finding shelf-life. If a user selects a different option for any of these parameters, the results will be updated and reflected in the UI and all downloadable outputs. However, the selected parameters themselves will not be outputted to any of the downloadable outputs, so users must indicate so in the Notes section.
+
+If a user selects a polynomial order and the highest order coefficient p-value > 0.05, a warning will output to the UI to indicate to the user that there is no statistical significance in the model order selected:
+
+```r
+uiOutput('warning_ui_polynomial_choice')
+```
+
+Once a stats file has been successfully uploaded to the app, all unique concentration values will be read from the stats file input and the list of concentrations will be outputted to a `checkboxGroupInput` on the sidebar panel:
+
+```r
+uiOutput('concentration_checkGroupInput')
+```
+This provides the user with the option to exclude entire titration values from the regression analysis and shelf-life prediction. The concentration choice names and values are configured by calling the following functions:
+
+```r
+concentration_choice_names <- reactive({ concentration_choiceNames(raw_upload_data()) })
+concentration_choice_values <- reactive({ concentration_choiceValues(concentration_choice_names()) })
+```
+where the `concentration_choiceNames(...)` function finds the list of unique concentrations listed in the stats file upload and appends the values with "ng/test" (this means that the units provided in this App will always be in "ng/test", so the user must upload the data with concentrations in "ng/test"), and the `concentration_choiceValues(...)` function assigns each concentration to a value. All selected concentrations will be assigned to `input$concentrations_to_include`. More details on this are provided in the "How Excluded Data is Handled" section of the README file.
+
+The final `renderUI` on the sidebar panel lays out the UI for configuring final downloadable output, depending on the analysis type selected:
+```r
+uiOutput('downloadable_outputs_ui')
+```
+
+If `input$analysis_type == "Manual"`, the ouput will include the option to add text to the top right corner of certain slides in the PPT output, and adjust the prefixes of the title of certain slides, based on which cell population the stats reflect (the typical Manual Workflow for the Stability team is that if more than 1 cell population is present and analyzed, the slides will represent the cell population name by the 'P1', 'P2', etc. prefix and the free text in the top right corner of the slides). The user can then add a name to the final PPT output and download the PPT with the `input$pptx_id` download button.
+
+If `input$analysis_type == "OMIQ"`, the output will include options to:
+
+1. Download the new regression report generated from any analysis done on the App for an individual cell population (`input$regression_report`)
+2. Upload the individual regression report downloaded from `input$regression_reports_indiv`
+3. Upload the initial stability report generated by OMIQ that includes the full stability analysis and regression report for all cell populations (`input$omiq_report_upload`)
+4. Download the final regression report (`input$regression_report_bundled`) that bundles the individual regression report created by the App with the final OMIQ stability report uploaded from step 3
+
+***
+
+### How Excluded Data is Handled
+
+#### Concentrations Excluded:
+In the reactive expression,
+```r
+concentrations_to_include_list()
+```
+the selected concentrations to include in the analysis will be used as an argument to the function:
+
+```r
+concentrations_to_keep(...) <- function{}
+```
+This will output a dataframe with data that includes only the concentrations the user wishes to include in the analysis, and is assigned to the reactive expression:
+
+```r
+reference_MFI_data_to_include()
+```
+This is used as an argument to the function:
+```r
+melt_reference_mfi_table(...) <- function{}
+```
+This function uses the `melt()` function to transform the dataframe so % of 4C Reference MFI values are all listed in the column "value", and all concentrations are listed in the column "Concentrations". 
+This will output the % of 4C Reference MFI dataframe that is rendered to the first tab of the main panel in the UI, "Stats Table", with only the concentrations to include in the analysis outputted. The output of this function is:
+***
+
+### Final Outputs / Downloads
+
+***
+
+### Constants
+
+***
+### Sidebar Panel
+
+### Main Panel
+
