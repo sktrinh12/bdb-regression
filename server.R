@@ -420,7 +420,7 @@ server = function(input, output) {
     
     # Reset all points
     observeEvent(input$exclude_reset, {
-        vals$keeprows <- rep(TRUE, 64)
+        vals$keeprows <- rep(TRUE, nrow(selected_melted_data()))
     })
     
     ## Step 7a: Calculate shelf life with and without confidence interval

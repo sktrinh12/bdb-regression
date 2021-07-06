@@ -85,17 +85,11 @@ ui = tagList(
 
                                   fluidRow(column(
                                       6,wellPanel(
-                                              h4(p(strong(
-                                                  "Predicted Shelf-Life (Raw)"
-                                              ))),
+                                              h4(p(strong("Predicted Shelf-Life (Raw)"))),
                                               uiOutput('check_lower_shelf_life'),
-                                              h4(p(
-                                                  strong("Predicted Shelf-Life (SAP)")
-                                              )),
+                                              h4(p(strong("Predicted Shelf-Life (SAP)"))),
                                               uiOutput('check_rounded_shelf_life'),
-                                              h4(p(
-                                                  strong("Model Coefficient P-value")
-                                              )),
+                                              h4(p(strong("Model Coefficient P-value"))),
                                               uiOutput('model_coeff_pvalue'),
                                               br(),
                                               uiOutput('warning_ui_model_coeff_pvalue'),
