@@ -9,20 +9,6 @@ library(hash)
 library(tidyr)
 library(tibble)
 
-add_sample_or_control_column <- function(df){
-    ## Repeat "control" or "sample" for length of unique concentrations
-    control_rep <- rep("control", length(unique(df$Concentration)))
-    sample_rep <- rep("sample", length(unique(df$Concentration)))
-    
-    ## Determine # of rows to repeat pattern for
-    unique_rows <- length(unique(df$Plate.Row))
-    unique_pops <- length(unique(df$pop))
-    
-    ## Add sample or control column to stats file
-    df <- df %>% add_column("Sample or Control" = rep(c(control_rep, sample_rep), unique_rows*unique_pops))
-    return(df)
-}
-
 ## Configure concentrations to output to UI and include in analysis
 
 # Create concentration choice names for UI selection (based on file input)
@@ -63,8 +49,24 @@ concentrations_to_keep <- function(reference_MFI_data_wide, columns_to_include){
   return (concentrations_to_keep_df)
 }
 
+## Configure stats tables
 
-## Calculate the % of 4C Reference MFI data from the uploaded stats
+# Add sample or control column to stats input data frame if OMIQ workflow
+add_sample_or_control_column <- function(df){
+  ## Repeat "control" or "sample" for length of unique concentrations
+  control_rep <- rep("control", length(unique(df$Concentration)))
+  sample_rep <- rep("sample", length(unique(df$Concentration)))
+  
+  ## Determine # of rows to repeat pattern for
+  unique_rows <- length(unique(df$Plate.Row))
+  unique_pops <- length(unique(df$pop))
+  
+  ## Add sample or control column to stats file
+  df <- df %>% add_column("Sample or Control" = rep(c(control_rep, sample_rep), unique_rows*unique_pops))
+  return(df)
+}
+
+# Calculate the % of 4C Reference MFI data from the uploaded stats
 calculate_perct_4C_MFI <- function(df){
 
     df$`%+` <- as.numeric(ifelse(sapply(as_tibble(rep(NA, length(df$`%+`))), function(i) { df$`%+` == "n/a" | df$`%+` == "#N/A" }), NA, df$`%+`))
@@ -90,8 +92,7 @@ calculate_perct_4C_MFI <- function(df){
     return(df)
 }
 
-## FOR UI USE ONLY
-## Convert the reference MFI table to a wide table, each column designated to each concentration
+# Convert the reference MFI table to a wide table, each column designated to each concentration
 create_raw_reference_MFI_table_wide <- function(df){
     
     # Take only subset of raw stats table
@@ -126,10 +127,6 @@ create_reference_MFI_table_wide_with_keeps <- function(keep){
     df_wide <- df_wide %>% arrange(Time)
     return(df_wide)
 }
-
-
-
-
 
 
 ## Model order, equation, and R^2 value
@@ -383,6 +380,7 @@ rounded_shelf_life <- function(shelf_life){
   return(shelf_life)
 }
 
+
 ## Residuals Calculations & Plots from 'Residuals & Normality Checks' tab 
 
 find_residuals <- function(df_melt, order){
@@ -584,6 +582,7 @@ percent_of_4C_MFI <- function(df){
 
     return(p)
 }
+
 
 ## Functions specific to downloadable outputs
 

@@ -135,7 +135,7 @@ The plot itself is generated using the following function (with `keep()` being t
 ```r
 regression_plot_global(...) <- function{}
 ```
-and then by applying several other parameters to the plot that are specific to the functionality of the UI, include `geom_point()` for the `exclude()` data, which has no fill and a black outline, the regression fit equation and R^2 value, and the plot range, which needs to be reactive since the user can zoom in on sections of the plot. The `regression_plot_global(...)` function is used to generate both the plots on the UI and plots in the downloadable outputs, and takes arguments related to the font sizes and data point sizes, which differ between the output methods (see Constants section for more details). 
+and then by applying several other parameters to the plot that are specific to the functionality of the UI, include `geom_point()` for the `exclude()` data, which has no fill and a black outline, the regression fit equation and R^2 value, and the plot range, which needs to be reactive since the user can zoom in on sections of the plot. The `regression_plot_global(...)` function is used to generate both the plots on the UI and plots in the downloadable outputs, and takes arguments related to the font sizes and data point sizes, which differ between the output methods. 
 
 The shelf-life prediction is based on the lower confidence bound, where the confidence interval is set by the user input `input$CI`. The lower shelf life is assigned the variable:
 ```r
@@ -236,7 +236,12 @@ Next, if the OMIQ analysis type is selected, a `selectInput` will be outputted t
 ```r
 raw_upload_data()
 ```
-This is the data inputted as an argument to most functions and reactive expressions used in the `server.R` file. 
+The % of 4C Reference MFI stats are then calculated using the function
+```r
+calculate_perct_4C_MFI(...) <- function{}
+```
+and a data frame of the raw stats, plus a new column with the % of 4C Reference MFI stats, is returned to the reactive expression `raw_upload_data_with_perct_MFI()`.
+
 
 ***
 
@@ -299,14 +304,39 @@ Any final data the user decides to include in the analysis is assigned in the da
 This will output the % of 4C Reference MFI dataframe that is rendered to the first tab of the main panel in the UI, "Stats Table", with only the concentrations to include in the analysis outputted. The output of this function is:
 ***
 
-### Final Outputs / Downloads
+## Final Outputs / Downloads
+
+### Manual Workflow - PPT Output
+If `input$analysis_type == 'Manual'`, the final output downloaded with the `output$pptx_id <- downloadHandler()` is in a PowerPoint presentation format, and uses the `library(officer)` package to configure. 
+
+The presentation uses the `bd_template_homemade.pptx` PPT template and the slides are formatted as follows:
+1) Protocol
+2) SSC Plots
+3) Histogram Plots
+4) MFI Plots
+5) Concentration vs Time #1
+6) Concentration vs Time #2
+7) Regression Analysis + Shelf-Life
+8) Residuals #1
+9) Residuals #2 - Normality
+
+Slides 1-3 will be blank other than a title and the model system text for slide #3, and the user will need to copy-paste their plots/protocol into these slides manually after downloading.
+
+Slides 4-6 include the same plots generated on the 'Plots' tab. 
+
+Slides 7-9 include the plots and tables of data generated from the 'Regression & Shelf-Life' tab and 'Residuals & Normality' tab. These slides are generated twice, one with the raw data only (to preserve all stats, no exclusions), and one with only the data included by the user from the UI. The latter references the same reactive expressions used everywhere in the UI. The former references new reactive expressions with the prefix `raw_` with the argument `raw_melted_data()`:
+```r
+raw_melted_data <- reactive({ na.omit(melt_reference_mfi_table(raw_reference_MFI_data_wide())) })
+```
+If no data was excluded, the PPT will output a copy of slides 7-9 and the user will have to manually delete them after downloading the PPT. Whether data was excluded or not, the 2nd set of the Regression Analysis + Shelf-Life slide will have a notes textbox with any notes the user added in the `input$notes` textbox from the UI. 
+
+The `raw_shelf_life_summary_flextable()` and `modified_shelf_life_summary_flextable()` are tables using the `library(flextable)` that include the shelf-life predictions, model p-value, and R^2 values. The `raw_anderson_darling_flextable()` and `modified_anderson_darling_flextable()` are tables using the same library that output the anderson-darling p-value. The color flags are configured with `raw_model_pvalue_color()`, `modified_model_pvalue_color()`, `raw_ad_pvalue_color()`, and `modified_ad_pvalue_color()` reactive expressions. 
 
 ***
 
-### Constants
+### OMIQ Workflow - PDF Output
 
-***
-### Sidebar Panel
 
-### Main Panel
+
+
 
