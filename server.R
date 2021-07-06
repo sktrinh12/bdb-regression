@@ -17,155 +17,181 @@ fontname <- "Arial"
 
 server = function(input, output) {
     
-    # Download Template Stats File
-    output$download_template_file <- downloadHandler(
-        filename <- function() {
-            paste("stats_template", "xlsx", sep=".")
-        },
-        content = function(file) {
-            file.copy('stability_stats_template.xlsx', file)
-        },
-        contentType = "text/xlsx"
-    )
-    # Download Example Stats File
-    output$download_example_file <- downloadHandler(
-        filename <- function() {
-            paste("stats_example", "xlsx", sep=".")
-        },
-        content = function(file) {
-            file.copy('stability_stats_example.xlsx', file)
-        },
-        contentType = "text/xlsx"
-    )
+  ################## Sidebar Panel UI ##########################
+  # Model Criteria User Inputs from GUI
+  confidenceInterval <- reactive({ input$CI })
+  threshold_y <- reactive({ input$threshold })
+  poly_order <- reactive({ order_of_polynomial(input$polynomial_order) })
+  
+  # Download Template Stats File
+  output$download_template_file <- downloadHandler(
+      filename <- function() {
+          paste("stats_template", "xlsx", sep=".")
+      },
+      content = function(file) {
+          file.copy('stability_stats_template.xlsx', file)
+      },
+      contentType = "text/xlsx"
+  )
+  # Download Example Stats File
+  output$download_example_file <- downloadHandler(
+      filename <- function() {
+          paste("stats_example", "xlsx", sep=".")
+      },
+      content = function(file) {
+          file.copy('stability_stats_example.xlsx', file)
+      },
+      contentType = "text/xlsx"
+  )
+  
+  # fileInput UI based on analysis type selected
+  output$manual_or_omiq <- renderUI({
+      
+      if(input$analysis_type == "Manual"){
+          tagList(div(style = "display: grid; grid-template-columns: 250px 250px;",
+                      div(style = "padding:5px;", downloadButton("download_template_file", "Download Stats Template")),
+                      div(style = "padding:5px;", downloadButton("download_example_file", "Download Stats Example"))),
+                  br(),
+                  div(style = "display: grid; grid-template-columns: auto;",
+                      fileInput("raw_upload","Choose stats file to upload",
+                                accept = c('text/xlsx',
+                                           '.xlsx'))))
+      } else{
+          tagList(
+              fileInput(
+                  "raw_upload",
+                  "Choose stats file to upload",
+                  accept = c('text/csv',
+                             '.csv')))
+      }
+  })
+  
+  # If OMIQ analysis, add marker name and selectInput to select cell pops to analyze
+  output$manual_or_omiq_cell_pop <- renderUI({
+      req(input$raw_upload)
+      if(input$analysis_type == "OMIQ"){
+          tagList(
+              tags$head(tags$style("
+                #marker_name_output{
+                display:inline
+                }")),
+              strong('Marker Name: ',style="display:inline;"), textOutput("marker_name_output"),
+              br(),
+              br(),
+              selectInput('cell_pop_input', "Select Cell Population", choices = c(unique(
+                  readr::read_csv(input$raw_upload$datapath)$pop)))
+          )
+      }
+      else{
+          tagList()
+      }
+  })
+  
+  # rendering UI for downloadable output options
+  output$downloadable_outputs_ui <- renderUI({
+      if(input$analysis_type == "Manual"){
+          tagList(
+              fluidRow(
+                  column(8,textAreaInput("model_system_data","QC Model System Data",
+                                         placeholder = "This will be copied to the top right corner of every PPT slide.",
+                                         height = "100px")
+                  ),
+                  column(4,radioButtons('pop_number','Cell Pop #',
+                                        choices = c("P1", "P2", "P3"),
+                                        inline = TRUE)
+                  )),
+              br(),
+              div(style = "display: grid; grid-template-columns: 250px 250px; padding: 5px;",
+                  div(textInput("filename_output", "Name Final PPT", placeholder = "Exclude .pptx")),
+                  div(style = "display: flex; align-items: center; justify-content: center; padding-top: 10px", 
+                      downloadButton("pptx_id", "Download PPT", class = "btn-primary")))
+              
+          )
+      }
+      else if(input$analysis_type == "OMIQ"){
+          tagList(
+              downloadButton("regression_report", "Download Individual Regression Report", class = "btn-primary"),
+              br(),
+              br(),
+              fileInput('regression_reports_indiv', "Upload Individual Regression Report", multiple = TRUE, accept = c('.pdf')),
+              fileInput("omiq_report_upload","Upload OMIQ Stability Report",accept = c(".pdf")),
+              downloadButton("regression_report_bundled", "Download Bundled Regression Report", class = "btn-primary"),
+              br()
+          )
+      }
+  })
+
+  ############### Handling initial stats file upload ##################
+  # STEP 1: Upload Raw Stats (without % 4C Reference MFI Data)
+  # STEP 1a: If OMIQ analysis, need to add additional column indicating whether the stats refer to the sample or control
+  raw_upload_data_prelim <- reactive({
+    inFile <- input$raw_upload
+    ext <- tools::file_ext(input$raw_upload$name)
+    if(is.null(inFile))
+      return(NULL)
+    else if(input$analysis_type == "Manual"){
+      
+      ifelse(ext != "xlsx", validate("Invalid file input extension. Please upload a .xlsx file only."), NA)
+      
+      df <- readxl::read_xlsx(inFile$datapath)
+    }
+    else if(input$analysis_type == "OMIQ"){
+      
+      ifelse(ext != "csv", validate("Invalid file input extension.. Please upload a .csv file only."), NA)
+      
+      df <- readr::read_csv(inFile$datapath)
+      df <- add_sample_or_control_column(df)
+    }
     
-    # fileInput UI based on analysis type selected
-    output$manual_or_omiq <- renderUI({
-        
-        if(input$analysis_type == "Manual"){
-            tagList(div(style = "display: grid; grid-template-columns: 250px 250px;",
-                        div(style = "padding:5px;", downloadButton("download_template_file", "Download Stats Template")),
-                        div(style = "padding:5px;", downloadButton("download_example_file", "Download Stats Example"))),
-                    br(),
-                    div(style = "display: grid; grid-template-columns: auto;",
-                        fileInput("raw_upload","Choose stats file to upload",
-                                  accept = c('text/xlsx',
-                                             '.xlsx')))
-                    
-                    )
-        } else{
-            tagList(
-                fileInput(
-                    "raw_upload",
-                    "Choose stats file to upload",
-                    accept = c('text/csv',
-                               '.csv'))
-                )
-            
-        }
-        
-    })
+    return(df)
+  })
+  
+  # STEP 1b: If OMIQ analysis, need to use stats related to only the cell population selected by user
+  raw_upload_data <- reactive({
+    req(raw_upload_data_prelim())
     
-    # If OMIQ analysis, add marker name and selectInput to select cell pops to analyze
-    output$manual_or_omiq_cell_pop <- renderUI({
-        req(input$raw_upload)
-        if(input$analysis_type == "OMIQ"){
-            tagList(
-                tags$head(tags$style("
-                  #marker_name_output{
-                  display:inline
-                  }")),
-                strong('Marker Name: ',style="display:inline;"), textOutput("marker_name_output"),
-                br(),
-                br(),
-                selectInput('cell_pop_input', "Select Cell Population", choices = c(unique(
-                    readr::read_csv(input$raw_upload$datapath)$pop)))
-            )
-        }
-        else{
-            tagList()
-        }
-    })
+    if(input$analysis_type == "Manual"){
+      df <- raw_upload_data_prelim()
+    }
+    else if(input$analysis_type == "OMIQ"){
+      req(input$cell_pop_input)
+      df <- configure_stats(raw_upload_data_prelim(), 
+                            as.character(input$cell_pop_input))
+    }
+    return(df)
+  })
+  
+  ##################### 'Plots' tab ########################
+  output$mfi_vs_concentration <- renderPlot({
+    req(input$raw_upload)
+    mfi_vs_concentration_plot(raw_upload_data())
+  })
+  output$mfi_vs_time <- renderPlot({
+    req(input$raw_upload)
+    mfi_vs_time_plot(raw_upload_data())
+  })
+  output$stain_index <- renderPlot({
+    req(input$raw_upload)
+    suppressWarnings(stain_index(raw_upload_data()))
+  })
+  output$signal_to_noise <- renderPlot({
+    req(input$raw_upload)
+    suppressWarnings(signal_to_noise(raw_upload_data()))
+  })
+  output$percent_positive <- renderPlot({
+    req(input$raw_upload)
+    percent_positive(raw_upload_data())
+  })
+  output$percent_of_4C_MFI <- renderPlot({
+    req(input$raw_upload)
+    percent_of_4C_MFI(raw_upload_data_with_perct_MFI())
+  })
     
-    # rendering UI for downloadable output options
-    output$downloadable_outputs_ui <- renderUI({
-        if(input$analysis_type == "Manual"){
-            tagList(
-                fluidRow(
-                    column(8,textAreaInput("model_system_data","QC Model System Data",
-                                           placeholder = "This will be copied to the top right corner of every PPT slide.",
-                                           height = "100px")
-                    ),
-                    column(4,radioButtons('pop_number','Cell Pop #',
-                                          choices = c("P1", "P2", "P3"),
-                                          inline = TRUE)
-                    )),
-                br(),
-                div(style = "display: grid; grid-template-columns: 250px 250px; padding: 5px;",
-                    div(textInput("filename_output", "Name Final PPT", placeholder = "Exclude .pptx")),
-                    div(style = "display: flex; align-items: center; justify-content: center; padding-top: 10px", 
-                        downloadButton("pptx_id", "Download PPT", class = "btn-primary")))
-                
-            )
-        }
-        else if(input$analysis_type == "OMIQ"){
-            tagList(
-                downloadButton("regression_report", "Download Individual Regression Report", class = "btn-primary"),
-                br(),
-                br(),
-                fileInput('regression_reports_indiv', "Upload Individual Regression Report", multiple = TRUE, accept = c('.pdf')),
-                fileInput("omiq_report_upload","Upload OMIQ Stability Report",accept = c(".pdf")),
-                downloadButton("regression_report_bundled", "Download Bundled Regression Report", class = "btn-primary"),
-                br()
-            )
-        }
-    })
 
     
-    
-    ############################### GUI ONLY ########################################
-    ## Model Criteria User Inputs from GUI
-    confidenceInterval <- reactive({ input$CI })
-    threshold_y <- reactive({ input$threshold })
-    poly_order <- reactive({ order_of_polynomial(input$polynomial_order) })
 
     ############################### RAW DATA ONLY ###################################
-    ## STEP 1: Upload Raw Stats (without % 4C Reference MFI Data)
-    raw_upload_data_prelim <- reactive({
-        inFile <- input$raw_upload
-        ext <- tools::file_ext(input$raw_upload$name)
-        if(is.null(inFile))
-            return(NULL)
-        else if(input$analysis_type == "Manual"){
-            
-            ifelse(ext != "xlsx", validate("Invalid file input extension. Please upload a .xlsx file only."), NA)
-            
-            df <- readxl::read_xlsx(inFile$datapath)
-        }
-        else if(input$analysis_type == "OMIQ"){
-            
-            ifelse(ext != "csv", validate("Invalid file input extension.. Please upload a .csv file only."), NA)
-            
-            df <- readr::read_csv(inFile$datapath)
-            df <- add_sample_or_control_column(df)
-        }
-        
-        return(df)
-    })
-    raw_upload_data <- reactive({
-        req(raw_upload_data_prelim())
-        
-        
-        if(input$analysis_type == "Manual"){
-            df <- raw_upload_data_prelim()
-        }
-        else if(input$analysis_type == "OMIQ"){
-            req(input$cell_pop_input)
-            df <- configure_stats(raw_upload_data_prelim(), 
-                                  as.character(input$cell_pop_input)
-                                  )
-        }
-        return(df)
-    })
+    
     
     ## Step 2: Calculate % of 4C Reference MFI Data
     raw_upload_data_with_perct_MFI <- reactive({
@@ -174,31 +200,7 @@ server = function(input, output) {
     })
     
     
-    ## Step 3: Create plots for all stats
-    output$mfi_vs_concentration <- renderPlot({
-        req(input$raw_upload)
-        mfi_vs_concentration_plot(raw_upload_data())
-    })
-    output$mfi_vs_time <- renderPlot({
-        req(input$raw_upload)
-        mfi_vs_time_plot(raw_upload_data())
-    })
-    output$stain_index <- renderPlot({
-        req(input$raw_upload)
-        suppressWarnings(stain_index(raw_upload_data()))
-    })
-    output$signal_to_noise <- renderPlot({
-        req(input$raw_upload)
-        suppressWarnings(signal_to_noise(raw_upload_data()))
-    })
-    output$percent_positive <- renderPlot({
-        req(input$raw_upload)
-        percent_positive(raw_upload_data())
-    })
-    output$percent_of_4C_MFI <- renderPlot({
-        req(input$raw_upload)
-        percent_of_4C_MFI(raw_upload_data_with_perct_MFI())
-    })
+    
     ## Step 4a: Create wide table of % 4C Reference MFI Data for UI ONLY
     raw_reference_MFI_data_wide_UI_only <- reactive({
         req(input$raw_upload)
@@ -268,7 +270,7 @@ server = function(input, output) {
     ## Step 8: Quality checks: model coefficient p-value & R-squared value
     
     # All model coefficient p-values
-    raw_poly_eval <- reactive({ polynomial_evaluation_of_linearity(raw_melted_data(), poly_order()) })
+    raw_poly_eval <- reactive({ get_model_coeff_pvalues(raw_melted_data(), poly_order()) })
     
     # R-squared value
     raw_R_sq_val <- reactive({ R_sq(raw_melted_data(), poly_order()) })
@@ -439,11 +441,6 @@ server = function(input, output) {
             )
         })
     
-    ## apply rounding ruleset
-    rounded_modified_lower_shelf_life <- reactive({
-        rounded_shelf_life(lower_shelf_life())
-    })
-    
     ## Step 7b: Output shelf-life to UI
     output$check_lower_shelf_life <- renderUI({
         req(input$raw_upload)
@@ -481,7 +478,7 @@ server = function(input, output) {
     # All model coefficient p-values
     poly_eval <- reactive({ 
         req(raw_upload_data())
-        polynomial_evaluation_of_linearity(keep(), poly_order()) 
+        get_model_coeff_pvalues(keep(), poly_order()) 
     })
     model_p_value <- reactive({  
         req(raw_upload_data())
@@ -503,54 +500,66 @@ server = function(input, output) {
     
     output$model_coeff_pvalue <- renderUI({ 
         req(input$raw_upload)
-        # if(poly_order() == 1){
-            
             if( model_p_value() >= 0.05 ){ ## Model coeff. not statistically significant
-                div(style = "color: red; font-size: 20px;",
-                    strong(model_p_value()))
+                
+              tagList(
+                div(style = "color: red; font-size: 20px;",strong(model_p_value())),
+                tags$i(" Warning: Model coefficient p-value not statistically significant.",
+                       class = "fas fa-times-circle", 
+                       style = "color: red; font-size: 20px")
+              )
             }
             else if( model_p_value() < 0.05 ){ # Model coeff. is statistically significant
                 div(style = "color: #2DC62D; font-size: 20px",
                     strong(model_p_value()))
             }
-        # }
-        # else if(poly_order() == 2){
-        #     
-        #     if( poly_eval()$c_pvalue >= 0.05 ){ ## Model coeff. not statistically significant
-        #         div(style = "color: red; font-size: 20px;",
-        #             strong(format(round(poly_eval()$c_pvalue,3),nsmall=3)))
-        #     }
-        #     else if( poly_eval()$c_pvalue < 0.05 ){ # Model coeff. is statistically significant
-        #         div(style = "color: #2DC62D; font-size: 20px",
-        #             strong(format(round(poly_eval()$c_pvalue,3),nsmall=3)))
-        #     }
-        # }
-        # else if(poly_order() == 3){
-        #     
-        #     if( poly_eval()$d_pvalue >= 0.05 ){ ## Model coeff. not statistically significant
-        #         div(style = "color: red; font-size: 20px;",
-        #             strong(format(round(poly_eval()$d_pvalue,3),nsmall=3)))
-        #     }
-        #     else if( poly_eval()$d_pvalue < 0.05 ){ # Model coeff. is statistically significant
-        #         div(style = "color: #2DC62D; font-size: 20px",
-        #             strong(format(round(poly_eval()$d_pvalue,3),nsmall=3)))
-        #     }
-        # }
     })
     
-    output$warning_ui_model_coeff_pvalue <- renderUI({
-        req(input$raw_upload)
-        
-        if(poly_order() == 1 && poly_eval()$b_pvalue >= 0.05){
-            tags$i(" Warning: Model coefficient p-value not statistically significant.",
-                   class = "fas fa-times-circle", 
-                   style = "color: red; font-size: 20px"
-            )
-        }
+    # Warning on sidebar panel below polynomial order options
+    output$warning_ui_polynomial_choice <- renderUI({
+      req(input$raw_upload)
+      
+      if(poly_order() == 2 && poly_eval()$c_pvalue >= 0.05){
+        tags$i(" Warning: p-value for 2nd order not statistically significant. Consider using linear model instead.",
+               class = "fa fa-exclamation-triangle", 
+               style = "color: #fcba03; font-size: 20px"
+        )
+      }
+      else if(poly_order() == 3 && poly_eval()$d_pvalue >= 0.05){
+        tags$i(" Warning: p-value for 3rd order not statistically significant. Consider using 2nd order or linear model instead.",
+               class = "fa fa-exclamation-triangle", 
+               style = "color: #fcba03; font-size: 20px"
+        )
+      }
     })
     
     # R-squared value
     R_sq_val <- reactive({ R_sq(keep(), poly_order()) })
+    
+    output$warning_ui_rsq <- renderUI({
+      req(input$raw_upload)
+      if(R_sq_val() < 0.80){
+        tags$i(" Warning: R-squared value is below 0.80",
+               class = "fa fa-exclamation-triangle", 
+               style = "color: #fcba03; font-size: 20px"
+        )
+      }
+    })
+    
+    # Slope of equation
+    slope <- reactive({ best_fit_equation(keep(), poly_order())$coefficients[[2]] })
+    
+    output$warning_ui_slope <- renderUI({
+      req(input$raw_upload)
+      if(slope() > 0){
+        tags$i(" Warning: Regression slope is positive",
+               class = "fa fa-exclamation-triangle", 
+               style = "color: #fcba03; font-size: 20px"
+        )
+      }
+    })
+    
+    
     
     ## Step 9: Calculate residuals and add residual plots for additional quality checks
     residuals_expr <- reactive({ find_residuals(keep(), poly_order()) })
@@ -594,8 +603,14 @@ server = function(input, output) {
         req(input$raw_upload)
         
         if( anderson_darling_normality_test_pvalue() < 0.05 ){ ## Not Normal Distribution
-            div(style = "color: red; font-size: 20px;",
-                strong(format(round(anderson_darling_normality_test_pvalue(),3),nsmall=3)))
+            tagList(
+              div(style = "color: red; font-size: 20px;",
+                strong(format(round(anderson_darling_normality_test_pvalue(),3),nsmall=3))),
+              br(),
+              tags$i(" Warning: Residuals do not follow normal distribution",
+                     class = "fa fa-exclamation-triangle", 
+                     style = "color: #fcba03; font-size: 20px")
+            )
         }
         else if( anderson_darling_normality_test_pvalue() >= 0.05 ){ # Normal Distribution
             div(style = "color: #2DC62D; font-size: 20px",
@@ -603,53 +618,11 @@ server = function(input, output) {
         }
     })
     
-    output$warning_normality_pvalue <- renderUI({
-        req(input$raw_upload)
-        if(anderson_darling_normality_test_pvalue() < 0.05){
-            tags$i(" Warning: Residuals do not follow normal distribution",
-                   class = "fa fa-exclamation-triangle", 
-                   style = "color: #fcba03; font-size: 20px"
-            )
-        }
-    })
-    ###################################### OUTPUT WARNINGS ############################################
-    slope <- reactive({ best_fit_equation(keep(), poly_order())$coefficients[[2]] })
+   
+
     
-    output$warning_ui_polynomial_choice <- renderUI({
-        req(input$raw_upload)
-        
-        if(poly_order() == 2 && poly_eval()$c_pvalue >= 0.05){
-            tags$i(" Warning: p-value for 2nd order not statistically significant. Consider using linear model instead.",
-                   class = "fa fa-exclamation-triangle", 
-                   style = "color: #fcba03; font-size: 20px"
-            )
-        }
-        else if(poly_order() == 3 && poly_eval()$d_pvalue >= 0.05){
-            tags$i(" Warning: p-value for 3rd order not statistically significant. Consider using 2nd order or linear model instead.",
-                   class = "fa fa-exclamation-triangle", 
-                   style = "color: #fcba03; font-size: 20px"
-            )
-        }
-    })
     
-    output$warning_ui_rsq <- renderUI({
-        req(input$raw_upload)
-        if(R_sq_val() < 0.80){
-            tags$i(" Warning: R-squared value is below 0.80",
-                   class = "fa fa-exclamation-triangle", 
-                   style = "color: #fcba03; font-size: 20px"
-            )
-        }
-    })
-    output$warning_ui_slope <- renderUI({
-        req(input$raw_upload)
-        if(slope() > 0){
-            tags$i(" Warning: Regression slope is positive",
-                   class = "fa fa-exclamation-triangle", 
-                   style = "color: #fcba03; font-size: 20px"
-            )
-        }
-    })
+    
     
     ############################################ FLEXTABLES FOR REPORTS #############################################
     

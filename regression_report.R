@@ -304,7 +304,7 @@ build_regression_report <- function(data_path, stats_file, cell_pop, marker_name
     shelf_life <- solve_for_shelf_life(df_melt, THRESHOLD_MFI, ORDER)
     
     ## Step 7: Calculate model p-value ##
-    p_value <- polynomial_evaluation_of_linearity(df_melt, ORDER)
+    p_value <- get_model_coeff_pvalues(df_melt, ORDER)
     
     ## Step 8: Calculated R^2 value ##
     r_sq <- R_sq(df_melt, ORDER)
@@ -480,7 +480,7 @@ build_regression_report_gui_modified <- function(df_melt, order, ci, threshold_m
     shelf_life <- solve_for_shelf_life(df_melt, threshold_mfi, order)
     print("step 6")
     ## Step 7: Calculate model p-value ##
-    p_value <- polynomial_evaluation_of_linearity(df_melt, order)
+    p_value <- get_model_coeff_pvalues(df_melt, order)
     print("step 7")
     ## Step 8: Calculated R^2 value ##
     r_sq <- R_sq(df_melt, order)

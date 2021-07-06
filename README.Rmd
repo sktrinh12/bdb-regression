@@ -14,6 +14,7 @@ This app is used for Stability studies to dynamically conduct a regression analy
 
 The only differences between the Manual Workflow and OMIQ Workflow in terms of Stability Regression App usage are the sidebar panel layout and user inputs/uploads, and the downloadable output formats.
 
+
 ***
 
 ## Sidebar Panel Overview
@@ -23,7 +24,7 @@ The sidebar panel using multiple renderUIs based on the `input$analysis_type`:
 ```r
 uiOutput('manual_or_omiq')
 ```
-This renders the 2 `downloadButton`s for the Stats Template and Example if the Manual analysis option is selected, and the `fileInput` for the stats file to be uploaded. Both the Manual and OMIQ analysis types use the same `input$raw_upload` `fileInput` id, but accept different file types (Manual accepts .xlsx files, OMIQ accepts .csv files since that is the file type to which OMIQ outputs the stats). 
+This renders the 2 `downloadButton`s for the Stats Template and Example if the Manual analysis option is selected, and the `fileInput` for the stats file to be uploaded. 
 
 ```r
 uiOutput('manual_or_omiq_cell_pop')
@@ -140,12 +141,108 @@ The shelf-life prediction is based on the lower confidence bound, where the conf
 ```r
 lower_shelf_life <- reactive({ solve_for_lower_shelf_life(...) })
 ```
+and outputted to the UI as:
+```r
+uiOutput('check_lower_shelf_life')
+```
+The shelf life from the lower bound is determined using the function `solve_for_lower_shelf_life(...)`. Arguments include the shelf-life/model parameters configured by the user, including the `input$CI`, `input$polynomial_order` and `input$threshold` (% of 4C Reference MFI Threshold), as well as the data frame with the included data points only. This function uses the `predict()` built-in R function to find the equation of the confidence interval. The `uniroot()` function is then used to find the intersection between the lower confidence bound and the % of 4C Reference MFI Threshold (`input$threshold`). If the lower confidence bound never intersects the `y = input$threshold` equation, `NULL` will be returned as the shelf-life, and a warning will be outputted to the user on the UI, configured in the `uiOutput('check_lower_shelf_life)`. If an intersection is found, the resulting shelf-life will be rounded to 2 decimal places and outputted (in years). 
 
+The "SAP" shelf-life prediction is also outputted to the UI:
 
+```r
+uiOutput('check_rounded_shelf_life')
+```
+This is the shelf-life prediction from the lower confidence bound with the SAP rounding rule set applied. 
 
-### How Excluded Data is Handled
+```r
+rounded_shelf_life(lower_shelf_life())
+```
+The rounding rules are configured in the `rounded_shelf_life(...)` function, and will round the `lower_shelf_life()` prediction down to the nearest half integer. If the shelf-life prediction is above 5 years, it will round down to 5 years to avoid extrapolation. If the shelf-life is less than or equal to 1.5 years, the minimum shelf-life required by most BDB Research Reagents, it will not round but output the actual shelf-life.
 
-#### Concentrations Excluded:
+For both the raw shelf-life and SAP shelf-life, the output will be in years and then converted to days using the conversion constants established by the team, `RAW_SL_TO_DAYS` and `SAP_SL_TO_DAYS`.
+
+A statistical technique called the Polynomial Evaluation of Linearity is conducted to determine the statistical significance of the model, particularly the polynomial order selected. The `get_model_coeff_pvalues(...)` function finds the p-values of all coefficients in the model equation, using the `lm()` and `summary()` built-in R functions.
+
+```r
+poly_eval <- reactive({ 
+    req(raw_upload_data())
+    get_model_coeff_pvalues(keep(), poly_order()) 
+})
+```
+The model p-value, determined in the reactive expression `model_p_value()`, is based on the polynomial order selected by the user on the UI. If the p-value is >= 0.05, the model coefficient is not statistically significant, and a warning will be outputted to the user on the UI:
+
+```r
+uiOutput('model_coeff_pvalue')
+```
+
+Other warnings outputted to the UI include:
+```r
+uiOutput('warning_ui_rsq') # warns user if R^2 value < 0.80
+uiOutput('warning_ui_slope') # warns user if slope of regression fit (not confidence bound) is positive
+```
+to warn the user if the R^2 value is below 0.80 or if the slope of the regression fit line (not the confidence bound line) is positive.
+
+Finally, a user can add notes relevant to their experiment or data review, and will be passed to the downloadable outputs:
+
+```r
+textAreaInput("notes", "Notes", ...)
+```
+
+### Residuals & Normality Checks tab 
+
+This tab is used as a quality assessment, where the residuals and the normality of the residuals are calculated and visualized. The residuals are calculated using the `global.R` function `find_residuals(...)`.
+
+The Residual vs Fit Plot is created using the `residual_vs_fit_plot(...)` function. The tooltip is added using the `residual_vs_fit_plot_w_tooltip(...)` function to indicate which time point and concentration each data point references. The latter function is only used in the UI. The plots generated for the downloadable reports reference the `residual_vs_fit_plot(...)` function. This plot be used for the user to identify outliers or patterns in the residuals, which would indicate bias. 
+
+```r
+plotlyOutput('residual_fit_plot')
+```
+A Histogram of Residuals plot is generated using the `residual_histogram(...)` function, and is used to visualize distribution of the residuals.
+
+```r
+plotlyOutput('residual_histogram')
+```
+A Normal Probability of Residuals plot is generated to visualize whether there is normal distribution in the residuals, and can also be used to identify outliers. The plot is generated using the `normal_probability_plot(...)` function. An additional function, `normal_probability_plot_w_tooltip(...)`, is used to output the plot to the UI only with a tooltip using the `plotly` library. Plots in the downloadable outputs reference the `normal_probability_plot(...)` function only. 
+
+```r
+plotlyOutput('normal_prob_plot_output')
+```
+An Anderson-Darling Normality Test is also conducted using the function `anderson_darling_normality_test(...)`, where the p-value is returned. If the p-value is less than 0.05, normal distribution is not statistically significant, and a warning will be outputted to the user on the UI indicating so. 
+
+```r
+uiOutput('anderson_darling_pvalue_output')
+```
+
+***
+
+## How Uploaded Stats File is Handled
+
+Data is uploaded on the Sidebar Panel. Both the Manual and OMIQ analysis types use the same `fileInput` id,
+
+```r
+fileInput("raw_upload","Choose stats file to upload",...)
+```
+but accept different file types (Manual accepts .xlsx files, OMIQ accepts .csv files since that is the file type to which OMIQ outputs the stats). 
+
+The first step is convert the stats data into a consistent format to be used for the analysis:
+
+```r
+raw_upload_data_prelim()
+```
+This reactive expression reads in the `input$raw_upload` data, and if the analysis type selected was OMIQ, an additional step is taken to add a sample/control column using the function `add_sample_or_control_column(...)` function to indicate which stats refer to the sample and which refer to the control (and are therefore redundant). This reactive function also includes a `validate()` statement to check that the file extension is as expected, given the `input$analysis_type` selected. If the file extension is incorrect, help text will be outputted to the UI. 
+
+Next, if the OMIQ analysis type is selected, a `selectInput` will be outputted to the sidebar panel where the user can select the cell population they would like to analyze. The `configure_stats(...)` function from the `regression_report.R` file will be called to return the stats in the expected format from only the selected cell population. The reactive expression that returns the stats in the final, expected format is:
+
+```r
+raw_upload_data()
+```
+This is the data inputted as an argument to most functions and reactive expressions used in the `server.R` file. 
+
+***
+
+## How Excluded Data is Handled
+
+### Concentrations Excluded:
 In the reactive expression,
 ```r
 concentrations_to_include_list()
@@ -168,7 +265,7 @@ This function uses the `melt()` function to transform the data frame so % of 4C 
 
 ***
 
-#### Individual Data Points Excluded:
+### Individual Data Points Excluded:
 
 The outputted data frame returned by the `melt_reference_mfi_table(...)` function is `selected_melted_data()`, and this is used several times throughout the `server` function as an argument/parameter for the `keep()` and `exclude()` reactive expressions, which are two separate data frames with the included and excluded data points only. A `reactiveValues()` called `vals` is initialized, and once the `input$raw_upload` stats file is uploaded, `vals$keeprows` will be updated and only the included data points, given by `selected_melted_data()`, will be set to `TRUE`. 
 

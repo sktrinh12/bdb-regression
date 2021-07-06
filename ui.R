@@ -92,7 +92,6 @@ ui = tagList(
                                               h4(p(strong("Model Coefficient P-value"))),
                                               uiOutput('model_coeff_pvalue'),
                                               br(),
-                                              uiOutput('warning_ui_model_coeff_pvalue'),
                                               uiOutput('warning_ui_rsq'),
                                               uiOutput('warning_ui_slope')
                                           )),
@@ -103,7 +102,7 @@ ui = tagList(
                                       )) # end of well panel
 
                          ), #end of Regression & Shelf-Life tab panel
-                         tabPanel("Residuals & Model Check",
+                         tabPanel("Residuals & Normality Checks",
                                   br(),
                                   fluidRow(column(6,plotlyOutput('residual_fit_plot')),
                                            column(6,plotlyOutput('residual_histogram'))
@@ -115,9 +114,7 @@ ui = tagList(
                                                h4(p(strong(
                                                "Anderson-Darling Normality Test p-value"
                                            ))),
-                                           uiOutput('anderson_darling_pvalue_output'),
-                                           br(),
-                                           uiOutput('warning_normality_pvalue')
+                                           uiOutput('anderson_darling_pvalue_output')
                                            )))
                                   
                          ) #end of Residuals tab panel
