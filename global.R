@@ -50,7 +50,18 @@ concentrations_to_keep <- function(reference_MFI_data_wide, columns_to_include){
 }
 
 ## Configure stats tables
-
+configure_stats <- function(stats, pop){
+  if(unique(stats$units) == "ug/test"){
+    stats$Concentration <- stats$Concentration * 1000 # convert to ng/test
+  }
+  stats <- stats[stats$`Sample or Control` == "sample",] %>% arrange(Concentration)
+  stats_pop <- stats[stats$pop == pop,]
+  
+  stats_pop <- stats_pop %>% select(Stability.Time.point, Concentration, `%+`, `MFI+`, `MFI-`, `rSD-`)
+  colnames(stats_pop)[1] <- c("Condition")
+  return(stats_pop)
+  
+}
 # Add sample or control column to stats input data frame if OMIQ workflow
 add_sample_or_control_column <- function(df){
   ## Repeat "control" or "sample" for length of unique concentrations

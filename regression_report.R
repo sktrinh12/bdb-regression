@@ -18,22 +18,7 @@ DATA_PT_SIZE = 10
 FONT_SIZE = 22
 EQN_SIZE = 10
 
-# source('omiq_regression.R')
 source('global.R')
-
-## Step 1: Upload raw stats ##
-configure_stats <- function(stats, pop){
-    if(unique(stats$units) == "ug/test"){
-        stats$Concentration <- stats$Concentration * 1000 # convert to ng/test
-    }
-    stats <- stats[stats$`Sample or Control` == "sample",] %>% arrange(Concentration)
-    stats_pop <- stats[stats$pop == pop,]
-    
-    stats_pop <- stats_pop %>% select(Stability.Time.point, Concentration, `%+`, `MFI+`, `MFI-`, `rSD-`)
-    colnames(stats_pop)[1] <- c("Condition")
-    return(stats_pop)
-    
-}
 
 get_stats_table_for_mfi_table <- function(stats_file, cell_pop, keep){
     
@@ -49,7 +34,7 @@ get_stats_table_for_mfi_table <- function(stats_file, cell_pop, keep){
     ## Step 2: Calculate % of 4C Reference MFI ##
     df <- calculate_perct_4C_MFI(df)
     
-    ## Step 3a: Transform % of 4C Reference MFI data to wide ##
+    ## Step 3: Transform % of 4C Reference MFI data to wide ##
     df <- create_reference_MFI_table_wide_with_keeps(keep)
     
     return(df)
@@ -355,7 +340,6 @@ build_regression_report <- function(data_path, stats_file, cell_pop, marker_name
     
     dev.off()
 }
-# build_regression_report("all_stats_new_wellids.csv", "Lymph")
 
 ## Merge with full_stability_report.pdf from OMIQ output
 merge_full_stability_report <- function(data_path, report_filename_list, all_regression_reports){
@@ -420,6 +404,7 @@ get_marker_name <- function(stats_file){
                          unique(stats_df$Fluorochrome))
     return(marker_name)
 }
+
 regression_gui_title_page = function(cell_pop, marker_name, order, ci, mfi_threshold, notes) {
     
     ## Marker info
@@ -462,6 +447,7 @@ regression_gui_title_page = function(cell_pop, marker_name, order, ci, mfi_thres
     
     figure
 }
+
 build_regression_report_gui_modified <- function(df_melt, order, ci, threshold_mfi, stats_file, cell_pop, marker_name, optimal, notes){
 
     df <- get_stats_table_for_mfi_table(stats_file, cell_pop, df_melt)
@@ -470,25 +456,22 @@ build_regression_report_gui_modified <- function(df_melt, order, ci, threshold_m
     
     ## Step 4: Create linear regression model ##
     fit_summary <- best_fit_equation(df_melt, order)
-    print("step 3")
+    
     ## Step 5: Add lower 95% Confidence Intervals ##
     bands <- find_confidence_bands(df_melt, order, ci, threshold_mfi)
-    print("step 4")
+    
     ## Step 6: Calculate predicted shelf-life ##
     lower_shelf_life <- solve_for_lower_shelf_life(df_melt, order, ci, threshold_mfi)
-    print("step 5")
+    
     shelf_life <- solve_for_shelf_life(df_melt, threshold_mfi, order)
-    print("step 6")
+    
     ## Step 7: Calculate model p-value ##
     p_value <- get_model_coeff_pvalues(df_melt, order)
-    print("step 7")
+    
     ## Step 8: Calculated R^2 value ##
     r_sq <- R_sq(df_melt, order)
-    print("step 8")
-    # Step 9: Create plot of regression model ##
-    my_grob = grobTree(textGrob("This text stays in place!", x=0.1,  y=0.95, hjust=0,
-                                gp=gpar(col="blue", fontsize=15, fontface="italic")))
     
+    # Step 9: Create plot of regression model ##
     regress_plot <- regression_plot_global(FONT_SIZE, DATA_PT_SIZE, EQN_SIZE, df_melt, bands, order, ci, 0.1, 0.2)  +
         coord_cartesian(ylim=c(0, NA)) + 
         scale_y_continuous(breaks=seq(0, 120, 20)) +
@@ -503,38 +486,35 @@ build_regression_report_gui_modified <- function(df_melt, order, ci, threshold_m
                               formula = y ~ poly(x,order,raw=TRUE), method="lm", col="red",
                               label.x=0,label.y=5,size=12)
     
-    # annotation_custom(my_grob) +
-    # stat_cor(label.x = 1, label.y = 20, size=12) +
-    # stat_regline_equation(label.x = 1, label.y = 10, size=24)
-    print("step 9")
+    
     
     residuals <- find_residuals(df_melt, order)
-    print("step 10")
+    
     ## Step 10: Create residual vs fit plot ##
     resid_plot <- residual_vs_fit_plot(df_melt, order, FONT_SIZE, DATA_PT_SIZE)
-    print("step 11")
+    
     ## Step 11: Create normal probability plot of residuals ##
     normal_prob_plot <- normal_probability_plot(df_melt, order, residuals, FONT_SIZE, DATA_PT_SIZE)
-    print("step 12")
+    
     ## Step 12: Create histogram of residuals ##
     resid_histogram <- residual_histogram(df_melt, order, FONT_SIZE)
-    print("step 13")
+    
     normality_p_value <- anderson_darling_normality_test(residuals)
-    print("step 14")
+    
     shelf_life_df <- create_shelf_life_summary_table(lower_shelf_life, r_sq, p_value)
-    print("step 15")
+    
     shelf_life_summary_png <- shelf_life_estimates_table_png(read_csv(stats_file, col_types = cols()), shelf_life_df, p_value$b_pvalue, lower_shelf_life, r_sq)
-    print("step 16")
+    
     reference_mfi_table_png <- perc_4C_mfi_table_png(df)
-    print("step 17")
+    
     normality_pvalue_png <- anderson_darling_p_value_png(normality_p_value)
-    print("step 18")
+    
     pdf(paste0("regression_report_",cell_pop, ".pdf"), title="Regression for Stability", width = 16, height = 10, onefile = TRUE)
-    print("step 19")
+    
     title_page = regression_gui_title_page(cell_pop, marker_name, order, ci, threshold_mfi, notes)
     print(title_page)
     print(regression_pdf(regress_plot, reference_mfi_table_png, shelf_life_summary_png, cell_pop, marker_name, optimal, notes))
-    print("step 20")
+    
     print(quality_checks_pdf(resid_plot, resid_histogram, normal_prob_plot, normality_pvalue_png))
     cat(paste("Making regression report for", cell_pop, "\n"))
     dev.off()
@@ -542,9 +522,6 @@ build_regression_report_gui_modified <- function(df_melt, order, ci, threshold_m
     
     
 }
-
-
-
 
 merged_pdfs_for_gui <- function(regr_report, uploaded_report){
     
