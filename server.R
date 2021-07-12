@@ -56,13 +56,17 @@ server = function(input, output) {
                       fileInput("raw_upload","Choose stats file to upload",
                                 accept = c('text/xlsx',
                                            '.xlsx'))))
-      } else{
+      } else if(input$analysis_type == "OMIQ"){
           tagList(
+              textInput('plate_id', "Plate ID", placeholder = "YYYY-MM-DD-Initials-Plate #"),
+              helpText('This will be the name of the folder that the regression report will be saved to on the VM.'),
               fileInput(
                   "raw_upload",
                   "Choose stats file to upload",
                   accept = c('text/csv',
-                             '.csv')))
+                             '.csv'))
+              
+              )
       }
   })
   
@@ -119,13 +123,20 @@ server = function(input, output) {
       }
       else if(input$analysis_type == "OMIQ"){
           tagList(
-              downloadButton("regression_report", "Download Individual Regression Report", class = "btn-primary"),
+              actionButton('create_regr_report', "Create Individual Regression Report", class = "btn-primary"),
               br(),
+              br(),
+              textOutput('indiv_report_text')%>%
+                  tagAppendAttributes(style= 'font-size: 16px; font-weight: bold;'),
+              br(),
+              helpText('Upload all individual regression reports created using the App for this experiment, and the final stability report with the initial regression generated from OMIQ when you are ready to bundle all regression reports together.'),
               br(),
               fileInput('regression_reports_indiv', "Upload Individual Regression Report", multiple = TRUE, accept = c('.pdf')),
               fileInput("omiq_report_upload","Upload OMIQ Stability Report",accept = c(".pdf")),
-              downloadButton("regression_report_bundled", "Download Bundled Regression Report", class = "btn-primary"),
-              br()
+              actionButton("regression_report_bundled", "Create Bundled Regression Report", class = "btn-primary"),
+              br(),
+              textOutput('bundld_report_text')%>%
+                  tagAppendAttributes(style= 'font-size: 16px; font-weight: bold;')
           )
       }
   })
@@ -1001,6 +1012,23 @@ server = function(input, output) {
       }
   )
   ########################## PDF Report Output (OMIQ Workflowonly) ######################
+  # Get optimal (used in label for regression report)
+  get_optimal <- reactive({
+      df <- readr::read_csv(input$raw_upload$datapath)
+      col_names <- colnames(df)
+      if("Optimal.with.units" %in% col_names){
+          optimal <- unique(df$Optimal.with.units)
+      }
+      else if("Optimal" %in% col_names & "Optimal.units" %in% col_names){
+          optimal <- paste(unique(df$Optimal.units), unique(df$Optimal))
+      }
+      
+      if(is.na(optimal) | is.null(optimal) | optimal == ""){
+          return(NA)
+      }
+      return(optimal)
+  })
+  
   create_regression_report_modified <- reactive({
     req(input$raw_upload)
     
@@ -1009,35 +1037,30 @@ server = function(input, output) {
     )
     report <- build_regression_report_gui_modified(
       keep(),
-      # keep(),
       poly_order(),
       as.numeric(input$CI),
       as.numeric(input$threshold),
       input$raw_upload$datapath,
       input$cell_pop_input, 
       marker_name(), 
-      "optimal=2mg/ml",
-      paste("Notes:", input$notes))
-    # dev.off()
+      get_optimal(),
+      paste("Notes:", input$notes),
+      input$plate_id)
     while (!is.null(dev.list()))  dev.off()
     return(report)
   })
+
   
-  output$regression_report <- downloadHandler(
-    filename = function(){
-      "regression_report_output.pdf"
-    },
-    content = function(file){
+  # When user clicks "Create Individual Regression Report" button, new folder created and regression report generated
+  observeEvent(input$create_regr_report, {
       create_regression_report_modified()
-    }
-  )
+      output$indiv_report_text <- renderText("Regression Report Created! Check your Plate ID folder that it completed successfully.")
+  })
   
-  output$regression_report_bundled <- downloadHandler(
-    filename = function(){
-      "regression_report_output_bundled.pdf"
-    },
-    content = function(file){
-      merged_pdfs_for_gui(input$omiq_report_upload$datapath, input$regression_reports_indiv$datapath)
-    }
-  )
+  # When user clicks "Create Bundled Regression Report" button, merges omiq report and regression report together and writes to plate id folder
+  observeEvent(input$regression_report_bundled, {
+      merged_pdfs_for_gui(input$omiq_report_upload$datapath, input$regression_reports_indiv$datapath, input$plate_id)
+      output$bundld_report_text <- renderText("Bundled Regression Report Created! Check your Plate ID folder that it completed successfully.")
+  })
+
 }

@@ -9,44 +9,20 @@ library(hash)
 library(tidyr)
 library(tibble)
 
-## Configure concentrations to output to UI and include in analysis
 
-# Create concentration choice names for UI selection (based on file input)
-concentration_choiceNames <- function(df){
-    list_of_concentrations <- unique(sort(df$Concentration))
-    choiceNames <- c()
-    for(i in list_of_concentrations){
-        name <- paste(i, "ng/test")
-        choiceNames <- append(choiceNames, name)
-    }
-    return(choiceNames)
-}
-
-# Create concentration choice values for UI selection (based on choice names)
-concentration_choiceValues <- function(choiceNames){
-    choiceValues <- c(1:length(choiceNames)+1)
-    return(choiceValues)
-}
-
-concentrations_to_keep <- function(reference_MFI_data_wide, columns_to_include){
-  df <- reference_MFI_data_wide
-  
-  concentrations_to_keep <- c()
-  list_of_included_columns <- c()
-  for (i in columns_to_include) {
-    concentrations_to_keep <- cbind(concentrations_to_keep, df[[as.numeric(i)]])
-    list_of_included_columns <- c(list_of_included_columns, as.numeric(i))
-  }
-  if(is.null(df)){
-    df_selected <- c()
-  }
-  else{
-    df_selected <- dplyr::select(df, all_of(list_of_included_columns))
-  }
-  
-  concentrations_to_keep_df <- cbind('Time'=df$Time, df_selected)
-  
-  return (concentrations_to_keep_df)
+# Add sample or control column to stats input data frame if OMIQ workflow
+add_sample_or_control_column <- function(df){
+    ## Repeat "control" or "sample" for length of unique concentrations
+    control_rep <- rep("control", length(unique(df$Concentration)))
+    sample_rep <- rep("sample", length(unique(df$Concentration)))
+    
+    ## Determine # of rows to repeat pattern for
+    unique_rows <- length(unique(df$Plate.Row))
+    unique_pops <- length(unique(df$pop))
+    
+    ## Add sample or control column to stats file
+    df <- df %>% add_column("Sample or Control" = rep(c(control_rep, sample_rep), unique_rows*unique_pops))
+    return(df)
 }
 
 ## Configure stats tables
@@ -62,20 +38,7 @@ configure_stats <- function(stats, pop){
   return(stats_pop)
   
 }
-# Add sample or control column to stats input data frame if OMIQ workflow
-add_sample_or_control_column <- function(df){
-  ## Repeat "control" or "sample" for length of unique concentrations
-  control_rep <- rep("control", length(unique(df$Concentration)))
-  sample_rep <- rep("sample", length(unique(df$Concentration)))
-  
-  ## Determine # of rows to repeat pattern for
-  unique_rows <- length(unique(df$Plate.Row))
-  unique_pops <- length(unique(df$pop))
-  
-  ## Add sample or control column to stats file
-  df <- df %>% add_column("Sample or Control" = rep(c(control_rep, sample_rep), unique_rows*unique_pops))
-  return(df)
-}
+
 
 # Calculate the % of 4C Reference MFI data from the uploaded stats
 calculate_perct_4C_MFI <- function(df){
@@ -116,6 +79,49 @@ create_raw_reference_MFI_table_wide <- function(df){
     }
     df_wide <- df_wide %>% arrange(Time)
     return(df_wide)
+}
+
+## Configure concentrations to output to UI and include in analysis
+
+# Create concentration choice names for UI selection (based on file input)
+concentration_choiceNames <- function(df){
+    list_of_concentrations <- unique(sort(df$Concentration))
+    choiceNames <- c()
+    for(i in list_of_concentrations){
+        name <- paste(i, "ng/test")
+        choiceNames <- append(choiceNames, name)
+    }
+    return(choiceNames)
+}
+
+# Create concentration choice values for UI selection (based on choice names)
+concentration_choiceValues <- function(choiceNames){
+    choiceValues <- c(1:length(choiceNames)+1)
+    return(choiceValues)
+}
+
+# Returns wide table with only included concentrations
+concentrations_to_keep <- function(df, columns_to_include){
+    
+    list_of_included_columns <- c()
+    # Loop through list of included columns (taking the choiceValues() each column is assigned to)
+    for (i in columns_to_include) {
+        list_of_included_columns <-
+            c(list_of_included_columns, as.numeric(i))
+    }
+    # If no columns included, return empty vector
+    if (is.null(df)) {
+        df_selected <- c()
+    }
+    # Else, select all of included columns from df
+    else{
+        df_selected <- dplyr::select(df, all_of(list_of_included_columns))
+    }
+    
+    # Return table with Time column and all columns included by user
+    concentrations_to_keep_df <- cbind('Time' = df$Time, df_selected)
+    
+    return (concentrations_to_keep_df)
 }
 
 # Melt data to generate `keep()` reactive expression used on UI and in analysis

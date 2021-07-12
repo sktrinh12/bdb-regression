@@ -49,11 +49,11 @@ ui = tagList(
                  mainPanel(
                      tabsetPanel(
                          tabPanel("Stats Table",
-                                  
                                   uiOutput('table_title'),
                                   br(),
                                   DT::dataTableOutput("reference_mfi_data_table_keep_only")
-                         ),tabPanel("Plots",
+                         ),
+                         tabPanel("Plots",
                                     br(),
                                     fluidRow(column(6,plotOutput('mfi_vs_concentration')),
                                              column(6,plotOutput('mfi_vs_time'))
