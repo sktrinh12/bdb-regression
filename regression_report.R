@@ -47,7 +47,7 @@ create_shelf_life_summary_table <- function(lower_shelf_life, r_sq, p_value){
     rounded_lower_shelf_life <- rounded_shelf_life(lower_shelf_life)
     
     df <- tibble(
-        "Raw Shelf-Life" = c(paste0(round(lower_shelf_life,1), " yrs (", round(lower_shelf_life*365,0), " days)")),
+        "Raw Shelf-Life" = c(paste0(format(lower_shelf_life,nsmall=2), " yrs (", round(lower_shelf_life*365,0), " days)")),
         "Rounded Shelf-Life" = c(paste0(rounded_lower_shelf_life, " yrs (", round(rounded_lower_shelf_life*365,0), " days)")),
         "R-squared" = round(r_sq, 2),
         "Model p-value"=format(round(p_value$b_pvalue, 3), nsmall = 3)

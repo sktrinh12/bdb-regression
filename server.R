@@ -384,7 +384,7 @@ server = function(input, output) {
           )
       }
       else{
-          tags$i(paste0(lower_shelf_life(), ' years   ', '(', 
+          tags$i(paste0(format(lower_shelf_life(),nsmall=2), ' years   ', '(', 
                         round(as.numeric(lower_shelf_life())*RAW_SL_TO_DAYS,0), ' days)'),
                  style="color: #eb6864; font-size: 20px; font-style: normal; font-weight: bold;"
           )
@@ -630,7 +630,7 @@ server = function(input, output) {
   # Table with summary of shelf-life data and quality checks for both raw data (no exclusions) and data included in App
   raw_shelf_life_summary_flextable <- reactive({ 
       df <- tibble(
-          "Raw Shelf-Life" = c(paste0(raw_lower_shelf_life(), " yrs (", 
+          "Raw Shelf-Life" = c(paste0(format(raw_lower_shelf_life(),nsmall=2), " yrs (", 
                                       round(raw_lower_shelf_life()*RAW_SL_TO_DAYS,0), " days)")),
           "Rounded Shelf-Life" = c(paste0(rounded_shelf_life(raw_lower_shelf_life()), " yrs (", 
                                           round(rounded_shelf_life(raw_lower_shelf_life())*SAP_SL_TO_DAYS,0), " days)")),
@@ -641,7 +641,7 @@ server = function(input, output) {
   
   modified_shelf_life_summary_flextable <- reactive({ 
       df <- tibble(
-          "Raw Shelf-Life" = c(paste0(lower_shelf_life(), " yrs (", 
+          "Raw Shelf-Life" = c(paste0(format(lower_shelf_life(), nsmall=2), " yrs (", 
                                       round(lower_shelf_life()*RAW_SL_TO_DAYS,0), " days)")),
           "SAP Shelf-Life" = c(paste0(rounded_shelf_life(lower_shelf_life()), " yrs (", 
                                       round(rounded_shelf_life(lower_shelf_life())*SAP_SL_TO_DAYS,0), " days)")),

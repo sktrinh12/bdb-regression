@@ -254,16 +254,6 @@ regression_plot_global <- function(text_size, data_point_size, eqn_size, df, con
     theme_minimal() +
     scale_color_brewer(palette = 'Dark2', na.translate = F,
                        labels = unique(df$Labels)) +
-    #     stat_regline_equation(data=df,
-    #                           aes(x=Time, y=value,
-    #                               label=paste(..eq.label..)),
-    #                           formula = y ~ poly(x,order,raw=TRUE), method="lm", col="red",
-    #                           label.x.npc="left",label.y.npc=eqn_location,size=eqn_size) +
-    # stat_regline_equation(data=df,
-    #                       aes(x=Time, y=value,
-    #                           label=paste(..rr.label..)),
-    #                       formula = y ~ poly(x,order,raw=TRUE), method="lm", col="red",
-    #                       label.x.npc="left",label.y.npc=eqn_location2,size=eqn_size) +
     theme(text=element_text(size = text_size),
           legend.position = "bottom")
   return(suppressWarnings(p))
