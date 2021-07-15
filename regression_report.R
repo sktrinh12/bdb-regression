@@ -18,7 +18,7 @@ DATA_PT_SIZE = 10
 FONT_SIZE = 22
 EQN_SIZE = 10
 
-docker_regression_directory <- "./datadump"
+docker_regression_directory <- "/datadump/stability-regression"
 
 source('global.R')
 
