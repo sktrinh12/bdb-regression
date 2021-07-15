@@ -1,0 +1,73 @@
+---
+title: "OMIQ Regression Analysis Report README"
+author: "Rachel Molloy"
+date: "7/14/2021"
+output: html_document
+---
+## **Regression Analysis & Reporting for Stability OMIQ Experiments**
+
+### Overview:
+
+The `regression_report_v1.1.R` script takes the `all_stats.csv` file from the `data_path` set by the user in the OmiqPipeline, conducts a regression analysis, predicts the shelf-life, and outputs a regression report for each individual cell population in the experiment. The script then bundles all cell population regression reports and merges them to the front of the `full_stability_report.pdf`, directly after the title page.
+
+***
+
+### Model & Shelf-Life Criteria
+
+The shelf-life and regression model criteria were established by the Stability team, and are therefore set as constants in the script:
+
+```r
+ORDER = 1 # For linear model
+CI = 0.95 # confidence interval
+THRESHOLD_MFI = 75 # threshold MFI
+```
+These can be adjusted in the Regression Stability App as well. The intersection between the lower confidence interval set by the constant value `CI` and the `THRESHOLD_MFI` constant are used to predict the shelf-life.
+
+### How the `build_regression_report_per_cell_pop()` Function Works
+
+The following function is called by the user in the `main_driver.R` file to generate the final regression reports:
+```r
+build_regression_report_per_cell_pop(data_path, "all_stats.csv")
+```
+
+This function takes the data from the `all_stats.csv` file, and then runs the function `add_sample_or_control_column(...)` to add a column indicating whether the row is for the control or sample statistics. Then, a table with only the sample statistics are returned. The function then loops through all unique cell populations listed in the stats file, and calls the following function for each:
+
+```r
+build_regression_report(...) <- function{}
+```
+
+If the regression report for a cell population completed successfully, a pdf named `regression_report_` and the cell population name will be written to the `data_path` directory. All regression reports for each cell population will then be merged to one document, named `all_reports.pdf`. The function, `merge_full_stability_report(...)`, is to split the title page from the `full_stability_report.pdf`, add the `all_reports.pdf` after the title page, and re-merge. The final output is written to the `data_path` directory and named,
+
+```r
+final_stability_report_with_regression.pdf
+```
+
+***
+
+### How the `build_regression_report()` Function Works
+
+For each cell population, the `build_regression_report(...)` function builds a 2-page report with the regression analysis, % of 4C Reference MFI table, and the shelf-life predictions on one page, and residual plots and the Anderson-Darling normality p-value on the second page. 
+
+First, the % of 4C Reference MFI table is generated with the following function:
+```r
+df <- get_stats_table_for_mfi_table(stats_file, cell_pop, df_melt)
+```
+This calls many of the same functions from the `global.R` file that are used in the Stability Regression App (see README file from Regression App for more details). 
+
+Inside the `build_regression_report(...)` function, pngs of the tables are generated with the following functions:
+
+```r
+reference_mfi_table_png <- perc_4C_mfi_table_png(...) # table with % of 4C Reference MFI data
+shelf_life_summary_png <- shelf_life_estimates_table_png(...) # table of shelf-life predictions
+normality_pvalue_png <- anderson_darling_p_value_png(normality_p_value) # table with anderson-darling p-value
+
+```
+The following two functions then take the plots and table pngs and `print()` them to a pdf page:
+
+```r
+regression_pdf <- function{} # page with refression plots and shelf-life tables
+quality_checks_pdf <- function{} # page with residual and normality plots/table
+```
+
+Finally, the two pages from the `regression_pdf()` and `quality_checks_pdf()` are written to a final report pdf named `regression_report_` and the cell population name will be written to the `data_path` directory.
+
