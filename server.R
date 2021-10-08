@@ -1,7 +1,6 @@
 source('global.R')
 source('regression_report.R')
 
-mypptx <- read_pptx("bd_template_homemade.pptx")
 
 ## CONSTANTS
 ui_font_size <- 16
@@ -767,8 +766,9 @@ server = function(input, output) {
           final_name()
       },
       content = function(file){
-          
-          mypptx  %>% 
+
+          read_pptx("bd_template_homemade.pptx") %>% 
+
               ################### PROTOCOL SLIDE ##################
               add_slide(layout = "Title and Content", master = "Office Theme") %>%
               ph_with(
