@@ -612,8 +612,24 @@ server = function(input, output) {
   })
   
   # All model coefficient p-values
-  raw_poly_eval <- reactive({ get_model_coeff_pvalues(raw_melted_data(), poly_order()) })
-  
+  raw_poly_eval <- reactive({ 
+    get_model_coeff_pvalues(raw_melted_data(), poly_order()) 
+  })
+
+  # Return p-value based on model polynomial order selected
+  raw_model_p_value <- reactive({  
+    req(raw_upload_data())
+    if(poly_order() == 1){
+      p_val <- format(round(raw_poly_eval()$b_pvalue,3),nsmall=3)
+    }
+    else if(poly_order() == 2){
+      p_val <- format(round(raw_poly_eval()$c_pvalue,3),nsmall=3)
+    }
+    else if(poly_order() == 3){
+      p_val <- format(round(raw_poly_eval()$d_pvalue,3),nsmall=3)
+    }
+    return(p_val)
+  })
   # R-squared value
   raw_R_sq_val <- reactive({ R_sq(raw_melted_data(), poly_order()) })
   
@@ -634,7 +650,7 @@ server = function(input, output) {
           "Rounded Shelf-Life" = c(paste0(rounded_shelf_life(raw_lower_shelf_life()), " yrs (", 
                                           round(rounded_shelf_life(raw_lower_shelf_life())*SAP_SL_TO_DAYS,0), " days)")),
           "R-squared" = c(raw_R_sq_val()),
-          "Model p-value"=c(model_p_value())
+          "Model p-value"=c(raw_model_p_value())
       )
   })
   
@@ -668,19 +684,19 @@ server = function(input, output) {
   
   
   raw_model_pvalue_color <- reactive({
-      if( raw_poly_eval()$b_pvalue >= 0.05 ){ ## Model coeff. not statistically significant
+      if( raw_model_p_value() >= 0.05 ){ ## Model coeff. not statistically significant
          return("red")
       }
-      else if( raw_poly_eval()$b_pvalue < 0.05 ){ # Model coeff. is statistically significant
+      else if( raw_model_p_value() < 0.05 ){ # Model coeff. is statistically significant
           return("#2DC62D")
       }
   })
   
   modified_model_pvalue_color <- reactive({
-      if( poly_eval()$b_pvalue >= 0.05 ){ ## Model coeff. not statistically significant
+      if( model_p_value() >= 0.05 ){ ## Model coeff. not statistically significant
           return("red")
       }
-      else if( poly_eval()$b_pvalue < 0.05 ){ # Model coeff. is statistically significant
+      else if( model_p_value() < 0.05 ){ # Model coeff. is statistically significant
           return("#2DC62D")
       }
   })
