@@ -1,0 +1,11 @@
+version: "3.9"
+services:
+  regapp:
+    build:
+      context: .
+      args:
+        LOCAL_USER_ID: bdb
+    ports:
+      - "3500:3838"
+    volumes:
+      - /datadump:/datadump:z

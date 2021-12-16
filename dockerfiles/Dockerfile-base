@@ -1,0 +1,24 @@
+FROM rocker/shiny:latest
+
+RUN apt-get update && \ 
+    apt-get upgrade -y && \
+    apt-get clean
+
+RUN apt-get update -qq && apt-get -y --no-install-recommends install \
+    libxml2-dev \
+    libcairo2-dev \
+    libpq-dev \
+    libssh2-1-dev \
+    unixodbc-dev \
+    libcurl4-openssl-dev \
+    libssl-dev \
+    ssh \
+    git \
+    libpoppler-cpp-dev
+
+
+COPY renv.lock ./renv.lock
+
+RUN Rscript -e 'install.packages("renv")'
+RUN Rscript -e 'renv::consent(provided=TRUE)'
+RUN Rscript -e 'renv::restore()'
